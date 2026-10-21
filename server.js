@@ -1,0 +1,4 @@
+import http from 'node:http';
+import {readFile} from 'node:fs/promises';
+const files = {'/':'index.html','/index.html':'index.html','/style.css':'style.css','/app.js':'app.js','/core.js':'core.js'};
+http.createServer(async(req,res)=>{try {const file=files[req.url];if(!file){res.writeHead(404);res.end();return;}const body=await readFile(new URL(file,import.meta.url));res.writeHead(200,{'Content-Type':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html','Content-Security-Policy':"default-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",'Cache-Control':'no-store'});res.end(body);}catch{res.writeHead(500);res.end('Unable to load local file');}}).listen(4173,'127.0.0.1',()=>console.log('SourceSteps: http://127.0.0.1:4173'));

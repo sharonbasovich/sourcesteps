@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "source": "Exact CRLF\r\n🧠 café é\r\nsame\nsame\n<img src=x onerror=alert(1)>",
+  "segments": [
+    {
+      "start": 0,
+      "end": 12,
+      "label": "unreviewed",
+      "done": false
+    },
+    {
+      "start": 12,
+      "end": 24,
+      "label": "action",
+      "done": true
+    },
+    {
+      "start": 24,
+      "end": 29,
+      "label": "unreviewed",
+      "done": false
+    },
+    {
+      "start": 29,
+      "end": 34,
+      "label": "unreviewed",
+      "done": false
+    },
+    {
+      "start": 34,
+      "end": 62,
+      "label": "unreviewed",
+      "done": false
+    }
+  ]
+}
