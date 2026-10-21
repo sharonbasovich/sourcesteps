@@ -1,6 +1,6 @@
 import {create,sample,split,merge,label,toggle,stats,serialize,parse} from './core.js';
 const $=id=>document.getElementById(id);
-let state=create(sample),active=null,epoch=0;
+let state=create(sample),active=null,epoch=0,importRequest=0;
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,fn,cls)=>{const b=el('button',text,cls);b.type='button';b.addEventListener('click',fn);return b;};
 function announce(text){$('status').textContent=text;}
@@ -39,5 +39,5 @@ $('sample').onclick=()=>confirmReplace('Replace this workspace with the syntheti
 $('clear').onclick=()=>confirmReplace('Clear all source and progress? Export first to keep your work.',()=>replace('','Workspace cleared.'));
 $('restart').onclick=()=>confirmReplace('Restart all labels and checks, keeping the exact source?',()=>{state=create(state.source);active=null;epoch++;render();announce('Review restarted. Exact source preserved; all pieces are unreviewed.');});
 $('export').onclick=()=>{const url=URL.createObjectURL(new Blob([serialize(state)],{type:'application/json'}));const a=el('a');a.href=url;a.download='sourcesteps.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Export requested. Check browser downloads for sourcesteps.json; it contains your full source.');};
-$('import').onchange=async e=>{const file=e.target.files[0],revision=epoch;e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('File exceeds the 2 MB limit.');const incoming=parse(await file.text());if(revision!==epoch)throw Error('Workspace changed while reading. Import again when ready.');confirmReplace('Replace this workspace with the validated local file? Export first to keep your work.',()=>{state=incoming;active=null;epoch++;$('source').value=state.source;render();announce('Local file imported. Exact source and validated mappings restored.');});}catch(error){announce(`Import rejected. ${error.message}`);}};
+$('import').onchange=async e=>{const file=e.target.files[0],revision=epoch,request=++importRequest;e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('File exceeds the 2 MB limit.');const text=await file.text();if(request!==importRequest)return;const incoming=parse(text);if(revision!==epoch)throw Error('Workspace changed while reading. Import again when ready.');confirmReplace('Replace this workspace with the validated local file? Export first to keep your work.',()=>{state=incoming;active=null;epoch++;$('source').value=state.source;render();announce('Local file imported. Exact source and validated mappings restored.');});}catch(error){if(request===importRequest)announce(`Import rejected. ${error.message}`);}};
 render();

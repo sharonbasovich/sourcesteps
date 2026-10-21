@@ -28,6 +28,8 @@ JSON import validates complete nonoverlapping coverage, allowed labels and check
 
 ## Disclosures and limitations
 
+Maintenance candidate 0.1.1-rc1 fixes concurrent local imports: a newer selection event supersedes older pending reads, so old results cannot prompt, apply or overwrite newer status. The 34-test suite covers both completion orders, failures, canceled replacement confirmation and empty selection events. Native picker cancellation that emits no change event is outside that handler. This candidate retains the Node.js/local-server workflow; no standalone HTML build is included or claimed verified.
+
 OpenAI Codex assisted design, implementation and testing. No runtime AI, external imagery/fonts, third-party packages or datasets are used. Node's built-in HTTP, file and test modules provide local development tooling. The assignment and fixtures are synthetic. No pre-existing project files were found in the initially empty workspace.
 
 This is a feasibility release candidate, not a submitted entry. No real-user validation, clinical benefit, demonstrated learning gains or global novelty is claimed. Manual labels can miss meaning. Focus never removes the obligation to review references, uncertainty and other requirements. Numeric UTF-16 splitting is an advanced control. See VERIFICATION.md for actual checks and remaining limitations; implementation of semantic controls is not a WCAG conformance claim.

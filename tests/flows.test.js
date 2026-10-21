@@ -66,3 +66,70 @@ test('oversized and malformed imports leave the session intact',async()=>{
  await h.get('import').onchange({target:{files:[{size:3,text:async()=>'{'}],value:'broken.json'}});
  assert.equal(h.snapshot().source,expected.source);assert.deepEqual(h.snapshot().labels,expected.labels);assert.equal(h.confirmations(),0);assert.match(h.snapshot().status,/Import rejected/);
 });
+
+test('newer file selection supersedes an older read even before the newer read completes',async()=>{
+ const h=harness();h.edit('Keep current work');h.label(0,'action');h.invoke('restart',true);
+ let finishOld,finishNew;
+ const oldText=new Promise(resolve=>{finishOld=resolve;});
+ const newText=new Promise(resolve=>{finishNew=resolve;});
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>oldText}],value:'old.json'}});
+ const newRead=h.get('import').onchange({target:{files:[{size:100,text:()=>newText}],value:'new.json'}});
+ finishOld(core.serialize(core.create('Older selection')));await oldRead;
+ assert.equal(h.snapshot().source,'Keep current work');
+ assert.equal(h.confirmations(),1,'Superseded import must not open a confirmation');
+ finishNew(core.serialize(core.create('Newest selection')));await newRead;
+ assert.equal(h.snapshot().source,'Newest selection');
+ assert.equal(h.confirmations(),2);
+});
+test('superseded read failure cannot overwrite newer import status',async()=>{
+ const h=harness();h.invoke('restart',true);let failOld;
+ const oldText=new Promise((resolve,reject)=>{failOld=reject;});
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>oldText}],value:'old.json'}});
+ await h.get('import').onchange({target:{files:[{size:100,text:async()=>core.serialize(core.create('Newest selection'))}],value:'new.json'}});
+ const expected=h.snapshot();failOld(Error('Older read failed'));await oldRead;
+ assert.deepEqual(h.snapshot(),expected);
+});
+test('invalid newer selection still supersedes older pending import without data loss',async()=>{
+ const h=harness();h.edit('Keep current work');h.invoke('restart',true);let finishOld;
+ const oldText=new Promise(resolve=>{finishOld=resolve;});
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>oldText}],value:'old.json'}});
+ await h.get('import').onchange({target:{files:[{size:1,text:async()=>'{'}],value:'invalid.json'}});
+ const expected=h.snapshot();finishOld(core.serialize(core.create('Older selection')));await oldRead;
+ assert.deepEqual(h.snapshot(),expected);assert.equal(h.snapshot().source,'Keep current work');assert.equal(h.confirmations(),1);
+});
+test('older successful read cannot replace a newer import that finishes first',async()=>{
+ const h=harness();h.invoke('restart',true);let finishOld;
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>{finishOld=resolve;})}],value:'old.json'}});
+ await h.get('import').onchange({target:{files:[{size:100,text:async()=>core.serialize(core.create('Newest'))}],value:'new.json'}});
+ const expected=h.snapshot(),count=h.confirmations();
+ finishOld(core.serialize(core.create('Old')));await oldRead;
+ assert.deepEqual(h.snapshot(),expected);assert.equal(h.confirmations(),count);
+});
+test('latest read failure preserves reviewed work and suppresses older success',async()=>{
+ const h=harness();h.edit('Keep this');h.label(0,'action');h.check();let finishOld;
+ const before=h.snapshot();
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>{finishOld=resolve;})}],value:'old.json'}});
+ await h.get('import').onchange({target:{files:[{size:100,text:async()=>{throw Error('Unreadable newest file');}}],value:'new.json'}});
+ const rejected=h.snapshot();
+ assert.equal(rejected.source,before.source);assert.deepEqual(rejected.labels,before.labels);assert.deepEqual(rejected.checked,before.checked);assert.equal(rejected.summary,before.summary);
+ assert.match(rejected.status,/Unreadable newest file/);
+ finishOld(core.serialize(core.create('Old')));await oldRead;
+ assert.deepEqual(h.snapshot(),rejected);assert.equal(h.confirmations(),0);
+});
+test('cancelling the newest validated import cannot revive an older pending read',async()=>{
+ const h=harness();h.edit('Keep this');h.label(0,'action');h.check();let finishOld;
+ const expected=h.snapshot();
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>{finishOld=resolve;})}],value:'old.json'}});
+ await h.get('import').onchange({target:{files:[{size:100,text:async()=>core.serialize(core.create('Newest'))}],value:'new.json'}});
+ assert.deepEqual(h.snapshot(),expected);assert.equal(h.confirmations(),1);
+ finishOld(core.serialize(core.create('Old')));await oldRead;
+ assert.deepEqual(h.snapshot(),expected);assert.equal(h.confirmations(),1);
+});
+test('an empty selection event supersedes a pending read without changing work',async()=>{
+ const h=harness();h.edit('Keep this');h.label(0,'action');h.check();let finishOld;
+ const expected=h.snapshot();
+ const oldRead=h.get('import').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>{finishOld=resolve;})}],value:'old.json'}});
+ await h.get('import').onchange({target:{files:[],value:''}});
+ finishOld(core.serialize(core.create('Old')));await oldRead;
+ assert.deepEqual(h.snapshot(),expected);assert.equal(h.confirmations(),0);
+});

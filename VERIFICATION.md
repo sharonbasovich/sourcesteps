@@ -1,12 +1,14 @@
-# SourceSteps 0.1.0-rc1 — source/download candidate
+# SourceSteps 0.1.1-rc1 — source/download candidate
 
-This source/download release candidate is a reproducible bundle for local evaluation, with no hosted demo or submitted entry. It preserves teacher text as positional source pieces, with manual labels and separate review/completion counts. No answer generation or semantic completeness inference occurs.
+This Node/server maintenance release candidate is a reproducible bundle for local evaluation, with no hosted demo or submitted entry. It preserves teacher text as positional source pieces, with manual labels and separate review/completion counts. No answer generation or semantic completeness inference occurs. It is based on published rc1; no standalone HTML candidate or browser-file validation claim is included.
 
 ## Evidence and correction
 
+The reviewed import request-generation fix assigns an identity to every import selection event. A superseded read returns before parsing or confirmation; its failures cannot overwrite the latest status. The existing workspace-revision guard still prevents applying data after edits. Seven focused regressions cover both completion orders, superseded/latest failures, invalid newer files, canceled newest confirmation and empty selection events. No source segmentation or rendering logic changed. A native file-picker cancel that emits no change event cannot be observed by the handler.
+
 Review found an import consistency defect: validated JSON could divide a surrogate pair or CRLF even though manual splitting refused those boundaries. A reproduction accepted both cases before the fix. Imported ranges now use the same boundary check as manual splits. Focused tests reject both malformed cases and confirm that valid Unicode/CRLF remains lossless while unknown completion/display metadata is discarded.
 
-The reviewed suite passes 27 tests covering exact round trips, malformed/oversized data, duplicate chunks, source edits, split/merge, limits, cancellation/reset/repeated flows and interrupted imports. The handler-flow tests execute actual app handlers with a minimal DOM and controlled confirmation results; they are not browser dialog tests. Run `npm test` to repeat the checks.
+The reviewed suite passes 34 tests covering exact round trips, malformed/oversized data, duplicate chunks, source edits, split/merge, limits, cancellation/reset/repeated flows and interrupted imports. The handler-flow tests execute actual app handlers with a minimal DOM and controlled confirmation results; they are not browser dialog tests. Run `npm test` to repeat the checks.
 
 Browser evidence from supported Chrome: manual labeling, one-action focus/check/source return, keyboard split/merge, source-edit invalidation, invalid local import rejection, hostile text safety, empty state, sample reload and 500-piece coverage. Desktop and 390px/320px responsive checks found no horizontal overflow. Skip-link focus was fixed and verified. Two synthetic-only screenshots are bundled. No animation or timed progress is present. Sampled foreground/background contrast calculations exceeded 4.5:1; this is not a complete audit.
 
