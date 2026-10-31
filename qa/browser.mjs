@@ -1,9 +1,7 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-const require=createRequire(import.meta.url);
+import { mkdir, writeFile } from 'node:fs/promises';
 const evidence=new URL('./evidence/',import.meta.url);await mkdir(evidence,{recursive:true});
 const server=spawn(process.execPath,['server.js'],{stdio:'inherit'});
 const results=[];let browser;

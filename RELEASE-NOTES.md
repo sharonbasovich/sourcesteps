@@ -6,7 +6,7 @@ This maintenance release fixes a reproduced focus-control defect. A rejected spl
 
 - 44 Node tests, including 10 handler regressions. Eight new rejection regressions fail against the prior app and pass with this fix.
 - Actual baseline Chromium run 41171803686 reproduced the wrong check error and broken return link.
-- Final Chromium verification covers seven groups: invalid offsets; Unicode and CRLF; 500-piece limit; successful split/merge; source changes and native confirmation cancel/accept; 320px and 390px keyboard/reduced-motion layouts. Final run and independent visual-review evidence are recorded with the release.
+- Final Chromium verification covers seven groups: invalid offsets; Unicode and CRLF; 500-piece limit; successful split/merge; source changes and native confirmation cancel/accept; 320px and 390px keyboard/reduced-motion layouts. The initial fixed-source run [41172038679](https://github.com/sharonbasovich/sourcesteps/actions/runs/41172038679) passed all seven groups; the release records the final exact-head rerun and independent visual review.
 - The packaging tool verifies deterministic bytes, SHA-256 manifest, extracted-copy tests and loopback HTTP allowlist/CSP.
 
 The unchanged screenshots in evidence/ are historical initial-workspace captures, not new evidence for this fix. Fresh desktop/mobile screenshots are in the corresponding GitHub Actions browser-evidence artifact.

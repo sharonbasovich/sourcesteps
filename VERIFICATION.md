@@ -1,27 +1,16 @@
-# SourceSteps 0.1.1-rc1 — source/download candidate
+# SourceSteps 0.1.2-rc1 — rejected boundary edit recovery
 
-This Node/server maintenance release candidate is a reproducible bundle for local evaluation, with no hosted demo or submitted entry. It preserves teacher text as positional source pieces, with manual labels and separate review/completion counts. No answer generation or semantic completeness inference occurs. It is based on published rc1; no standalone HTML candidate or browser-file validation claim is included.
+This maintenance release fixes a reproduced focus-control defect. A rejected split previously cleared the active action internally while leaving its visible panel unchanged; checking it failed and returning to source could throw. Focus now resets only after a successful split or merge. Exact source, labels, checks and current action remain intact on rejection.
 
-## Evidence and correction
+## Verification
 
-The reviewed import request-generation fix assigns an identity to every import selection event. A superseded read returns before parsing or confirmation; its failures cannot overwrite the latest status. The existing workspace-revision guard still prevents applying data after edits. Seven focused regressions cover both completion orders, superseded/latest failures, invalid newer files, canceled newest confirmation and empty selection events. No source segmentation or rendering logic changed. A native file-picker cancel that emits no change event cannot be observed by the handler.
+- 44 Node tests, including 10 handler regressions. Eight new rejection regressions fail against the prior app and pass with this fix.
+- Actual baseline Chromium run 41171803686 reproduced the wrong check error and broken return link.
+- Final Chromium verification covers seven groups: invalid offsets; Unicode and CRLF; 500-piece limit; successful split/merge; source changes and native confirmation cancel/accept; 320px and 390px keyboard/reduced-motion layouts. The initial fixed-source run [41172038679](https://github.com/sharonbasovich/sourcesteps/actions/runs/41172038679) passed all seven groups; the release records the final exact-head rerun and independent visual review.
+- The packaging tool verifies deterministic bytes, SHA-256 manifest, extracted-copy tests and loopback HTTP allowlist/CSP.
 
-Review found an import consistency defect: validated JSON could divide a surrogate pair or CRLF even though manual splitting refused those boundaries. A reproduction accepted both cases before the fix. Imported ranges now use the same boundary check as manual splits. Focused tests reject both malformed cases and confirm that valid Unicode/CRLF remains lossless while unknown completion/display metadata is discarded.
+The unchanged screenshots in evidence/ are historical initial-workspace captures, not new evidence for this fix. Fresh desktop/mobile screenshots are in the corresponding GitHub Actions browser-evidence artifact.
 
-The reviewed suite passes 34 tests covering exact round trips, malformed/oversized data, duplicate chunks, source edits, split/merge, limits, cancellation/reset/repeated flows and interrupted imports. The handler-flow tests execute actual app handlers with a minimal DOM and controlled confirmation results; they are not browser dialog tests. Run `npm test` to repeat the checks.
+## Preserved boundaries
 
-Browser evidence from supported Chrome: manual labeling, one-action focus/check/source return, keyboard split/merge, source-edit invalidation, invalid local import rejection, hostile text safety, empty state, sample reload and 500-piece coverage. Desktop and 390px/320px responsive checks found no horizontal overflow. Skip-link focus was fixed and verified. Two synthetic-only screenshots are bundled. No animation or timed progress is present. Sampled foreground/background contrast calculations exceeded 4.5:1; this is not a complete audit.
-
-## Explicit limits
-
-- Prior browser export/download outcome remains uncertain and was not retried. Download/reimport is not end-to-end verified.
-- Native confirmation dismissal triggers a supported browser tool focus-emulation timeout. The dialog disappears, but native cancel/confirm state and focus return cannot be fully inspected. Model-level state-safety tests pass; do not claim native-dialog UX verified.
-- Actual screen-reader speech, full keyboard traversal, 200% zoom and reduced-motion preference emulation remain incomplete. Keyboard zoom had no observed effect; available capabilities do not expose media emulation. No browser/OS security settings were changed.
-- Browser textarea entry normalizes line endings. JSON preserves its exact source string until an edit; every actual edit invalidates mappings. Imported labels/checks are user declarations, not cryptographically authenticated teacher requirements.
-- Manual labeling can overlook meaning, dependencies and constraints. No real learner study, clinical benefit, proven learning gain, global novelty or WCAG conformance is claimed.
-
-## Local reproducibility
-
-Use Node.js 22 for `npm test` and `npm start`, with no install/build step. Use existing Python 3.13 and Node.js 22 for `python scripts/release.py`. The packaging script uses an explicit file allowlist, fixed ZIP metadata, per-file SHA-256 manifest, safe fresh extraction, manifest/content checks, tests from the extracted copy, deterministic rebuild comparison and loopback HTTP smoke checks. It does not make internet requests. See README.md, DEMO.md, ATTRIBUTION.md and LICENSE.
-
-The archive intentionally substitutes this concise report for the workspace's historical verification log to exclude personal workspace paths, browser tab IDs and operational clutter. It excludes all user downloads, secrets, repository metadata, caches, node_modules and generated test-output directories. Existing development artifacts are not deleted.
+Node 22 loopback HTTP distribution only; no hosted or standalone-file deployment. No autosave or learning-outcome claims. No retry of the historical uncertain application export; synthetic JSON imports in isolated CI are distinct. No physical-phone, native screen-reader or accessibility-certification claim. Original v0.1.0-rc1 and v0.1.1-rc1 releases remain unchanged. Existing AccessED submission is preserved.

@@ -1,1 +1,8 @@
-{"name":"sourcesteps-browser-qa","private":true,"type":"module","devDependencies":{"playwright":"1.56.1","axe-core":"4.10.3"}}
+{
+  "name": "sourcesteps-browser-qa",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
