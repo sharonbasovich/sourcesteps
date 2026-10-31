@@ -30,7 +30,11 @@ function harness(){
  return {get,snapshot,confirmations:()=>confirmations,focused:()=>focused,
   edit(text){get('source').value=text;get('source').handlers.input();},
   label(i,value){const x=get(`label-${i}`);x.value=value;x.handlers.change();},
-  check(){visit(get('focus-content'),x=>x.tagName==='input')[0].handlers.change();},
+  check(){const x=visit(get('focus-content'),x=>x.tagName==='input')[0];x.checked=!x.checked;x.handlers.change();},
+  focusAction(i){visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent==='Focus this action')[0].handlers.click();},
+  boundary(i,kind,offset){if(offset!==undefined)get(`offset-${i}`).value=String(offset);const b=visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent===kind)[0];assert.equal(b.disabled,false);b.handlers.click();},
+  back(){visit(get('focus-content'),x=>x.tagName==='button'&&x.textContent==='Back to source piece')[0].handlers.click();},
+  focusText(){return get('focus-content').textContent;},
   invoke(id,confirmed){answer=confirmed;get(id).focus();get(id).onclick();},
  };
 }
@@ -132,4 +136,56 @@ test('an empty selection event supersedes a pending read without changing work',
  await h.get('import').onchange({target:{files:[],value:''}});
  finishOld(core.serialize(core.create('Old')));await oldRead;
  assert.deepEqual(h.snapshot(),expected);assert.equal(h.confirmations(),0);
+});
+
+// Failed boundary edits must not invalidate the still-rendered action controls.
+for(const [name,source,offset,error] of [
+ ['zero offset','First action\nSecond action',0,/Choose a position/],
+ ['end offset','First action\nSecond action',13,/Choose a position/],
+ ['fractional offset','First action\nSecond action',1.5,/Choose a position/],
+ ['blank offset','First action\nSecond action','',/Choose a position/],
+ ['surrogate pair','🧠 First action\nSecond action',1,/Unicode pair/],
+ ['CRLF boundary','First action\r\nSecond action',13,/line ending/],
+ ['piece limit','First action\nSecond action\n'+'Extra\n'.repeat(498),1,/Maximum 500 pieces/],
+])test(`rejected split (${name}) preserves explicit focus and its live controls`,()=>{
+ const h=harness();h.edit(source);h.label(0,'action');h.label(1,'action');h.focusAction(1);h.check();
+ const before=h.snapshot(),focusBefore=h.focusText();
+ // Reject editing a different piece from the explicitly selected second action.
+ h.boundary(0,'Split piece',offset);
+ const after=h.snapshot();assert.match(after.status,error);
+ assert.deepEqual({...after,status:before.status},before);
+ assert.equal(h.focusText(),focusBefore);assert.match(h.focusText(),/source piece 2/);
+ h.back();assert.equal(h.focused(),'label-1');
+ h.check();assert.match(h.snapshot().status,/action check was updated/);
+ assert.deepEqual(h.snapshot().checked,[false]);assert.match(h.snapshot().summary,/0 \/ 2actions checked/);
+ h.check();assert.deepEqual(h.snapshot().checked,[true]);assert.match(h.snapshot().summary,/1 \/ 2actions checked/);
+ h.back();assert.equal(h.focused(),'label-1');
+});
+test('rejected split of the focused action preserves its checked state and controls',()=>{
+ const h=harness();h.edit('First action\nSecond action');h.label(0,'action');h.label(1,'action');h.focusAction(1);h.check();
+ const before=h.snapshot();h.boundary(1,'Split piece',0);
+ assert.deepEqual({...h.snapshot(),status:before.status},before);
+ h.back();assert.equal(h.focused(),'label-1');h.check();assert.deepEqual(h.snapshot().checked,[false]);
+ assert.match(h.snapshot().status,/action check was updated/);
+});
+test('successful split clears affected review and remaps surviving focus controls',()=>{
+ const h=harness();h.edit('First action\nSecond action');h.label(0,'action');h.label(1,'action');h.focusAction(0);h.check();
+ h.boundary(0,'Split piece',5);
+ assert.deepEqual(h.snapshot().labels,['unreviewed','unreviewed','action']);
+ assert.equal(h.snapshot().source,'First action\nSecond action');
+ assert.deepEqual(h.snapshot().checked,[false]);assert.match(h.snapshot().summary,/0 \/ 1actions checked/);
+ assert.match(h.focusText(),/source piece 3/);assert.equal(h.focused(),'label-0');
+ h.back();assert.equal(h.focused(),'label-2');h.check();assert.deepEqual(h.snapshot().checked,[true]);
+ assert.match(h.snapshot().summary,/1 \/ 1actions checked/);
+});
+test('successful merge clears both affected reviews and remaps surviving focus controls',()=>{
+ const h=harness();h.edit('First action\nSecond action\nThird action');
+ for(let i=0;i<3;i++){h.label(i,'action');h.focusAction(i);h.check();}
+ h.focusAction(1);h.boundary(0,'Merge with next piece');
+ assert.deepEqual(h.snapshot().labels,['unreviewed','action']);
+ assert.equal(h.snapshot().source,'First action\nSecond action\nThird action');
+ assert.deepEqual(h.snapshot().checked,[true]);assert.match(h.snapshot().summary,/1 \/ 1actions checked/);
+ assert.match(h.focusText(),/source piece 2/);assert.equal(h.focused(),'label-0');
+ h.back();assert.equal(h.focused(),'label-1');h.check();assert.deepEqual(h.snapshot().checked,[false]);
+ assert.match(h.snapshot().summary,/0 \/ 1actions checked/);
 });

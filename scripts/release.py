@@ -10,7 +10,7 @@ import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
-NAME = 'SourceSteps-0.1.1-rc1'
+NAME = 'SourceSteps-0.1.2-rc1'
 FILES = [
     'index.html', 'style.css', 'app.js', 'core.js', 'server.js', 'package.json',
     'README.md', 'LICENSE', 'ATTRIBUTION.md', 'DEMO.md', 'RELEASE-NOTES.md',
@@ -104,7 +104,7 @@ def main():
         'deterministic_rebuild': True, 'manifest_verified': True,
         'packaged_tests_passed': True, 'loopback_http_checks': checks,
         'network_scope': 'only 127.0.0.1:4173; no external requests',
-        'limitations': 'No browser export retry, native dialog/zoom/screen-reader or reduced-motion emulation claims',
+        'limitations': 'No historical browser export retry, direct-file compatibility, physical-device or screen-reader claim; see VERIFICATION.md for separate Chromium evidence',
     }, indent=2) + '\n', encoding='utf-8')
     print(json.dumps({'archive': str(archive_path), 'sha256': digest, 'files': len(expected), 'verified': True}))
 

@@ -19,8 +19,8 @@ function render(){
   row.append(controls);
   const details=el('details'),summary=el('summary','Adjust piece boundaries');details.append(summary,el('p','Split at a character boundary using a UTF-16 offset (the same units used in the source range). Both resulting pieces become unreviewed. Merging also clears labels and checks.'));
   const offsetLabel=el('label',`Split offset for piece ${i+1}`),offset=el('input');offset.type='number';offset.min='1';offset.max=String(x.end-x.start-1);offset.value=String(Math.floor((x.end-x.start)/2));offset.id=`offset-${i}`;offsetLabel.htmlFor=offset.id;details.append(offsetLabel,offset);
-  const splitButton=button('Split piece',()=>{active=null;act(()=>split(state,i,Number(offset.value)),'Piece split. Review both new pieces.',`label-${i}`);});splitButton.disabled=x.end-x.start<2;details.append(splitButton);
-  const mergeButton=button('Merge with next piece',()=>{active=null;act(()=>merge(state,i),'Adjacent pieces merged and set to unreviewed.',`label-${i}`);});mergeButton.disabled=i===state.segments.length-1;details.append(mergeButton);row.append(details);$('segments').append(row);
+  const splitButton=button('Split piece',()=>{act(()=>{const next=split(state,i,Number(offset.value));active=null;return next;},'Piece split. Review both new pieces.',`label-${i}`);});splitButton.disabled=x.end-x.start<2;details.append(splitButton);
+  const mergeButton=button('Merge with next piece',()=>{act(()=>{const next=merge(state,i);active=null;return next;},'Adjacent pieces merged and set to unreviewed.',`label-${i}`);});mergeButton.disabled=i===state.segments.length-1;details.append(mergeButton);row.append(details);$('segments').append(row);
  });renderFocus();$('export').disabled=!state.source.length;
 }
 function renderFocus(){const box=$('focus-content');box.replaceChildren();const actions=state.segments.map((x,i)=>({x,i})).filter(({x})=>x.label==='action');if(active===null||state.segments[active]?.label!=='action')active=actions.find(({x})=>!x.done)?.i??actions[0]?.i??null;
