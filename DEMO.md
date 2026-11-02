@@ -12,3 +12,6 @@ Only synthetic JSON fixtures are included under tests/fixtures. A valid import i
 Screenshots: evidence/desktop.jpg and evidence/mobile-390.jpg. They capture the sample workflow surface, not an accessibility certification. They predate the import-boundary validation fix, which does not change the visible interface.
 
 Limits: manual labels can miss meaning. No answer generation, semantic completion judgment or dependency inference occurs. Real screen-reader testing, native confirmation focus, 200% zoom and reduced-motion emulation remain incomplete. The app has no timer or active animation. Video is optional; none is bundled. Run this candidate locally; source/download distribution includes no hosted deployment or AccessED submission.
+
+### Safe source edits (v0.1.3-rc1)
+Label an action and check it. Type a space in the source: review remains unchanged and an unapplied-draft panel appears. Cancel Apply to retain both draft and review, or Discard to restore the applied source. Apply and confirm only when you intend to restart review. Export is unavailable until the draft is applied or discarded.
