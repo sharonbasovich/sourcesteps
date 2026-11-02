@@ -21,14 +21,15 @@ function harness(){
   addEventListener(name,fn){this.handlers[name]=fn;}
   focus(){focused=this.id;}
  }
- for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import']){const x=new Element('div');x.id=id;}
+ for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state']){const x=new Element('div');x.id=id;}
  const document={getElementById:id=>ids.get(id),createElement:tag=>new Element(tag)};
  vm.runInNewContext(body,{...core,document,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob},{filename:'app.js'});
  const get=id=>ids.get(id);
  const visit=(node,predicate)=>node.children.flatMap(x=>[...(predicate(x)?[x]:[]),...visit(x,predicate)]);
  const snapshot=()=>({source:get('context').textContent,labels:visit(get('segments'),x=>x.tagName==='select').map(x=>x.value),checked:visit(get('focus-content'),x=>x.tagName==='input').map(x=>x.checked),summary:get('summary').textContent,status:get('status').textContent});
  return {get,snapshot,confirmations:()=>confirmations,focused:()=>focused,
-  edit(text){get('source').value=text;get('source').handlers.input();},
+  draft(text){get('source').value=text;get('source').handlers.input();},
+  edit(text){get('source').value=text;get('source').handlers.input();const prior=answer;answer=true;get('apply-source').onclick();answer=prior;},
   label(i,value){const x=get(`label-${i}`);x.value=value;x.handlers.change();},
   check(){const x=visit(get('focus-content'),x=>x.tagName==='input')[0];x.checked=!x.checked;x.handlers.change();},
   focusAction(i){visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent==='Focus this action')[0].handlers.click();},
@@ -188,4 +189,47 @@ test('successful merge clears both affected reviews and remaps surviving focus c
  assert.match(h.focusText(),/source piece 2/);assert.equal(h.focused(),'label-0');
  h.back();assert.equal(h.focused(),'label-1');h.check();assert.deepEqual(h.snapshot().checked,[false]);
  assert.match(h.snapshot().summary,/0 \/ 1actions checked/);
+});
+
+test('typing a draft preserves applied source, all labels, checks and selected action',()=>{
+ const h=harness();h.edit('First\nSecond');h.label(0,'reference');h.label(1,'action');h.focusAction(1);h.check();const before=h.snapshot(),focus=h.focusText();
+ h.draft('First\nSecond ');assert.deepEqual({...h.snapshot(),status:before.status},before);assert.equal(h.focusText(),focus);assert.equal(h.get('export').disabled,true);assert.equal(h.get('source-draft').hidden,false);assert.equal(h.get('apply-source').disabled,false);
+ h.invoke('discard-source');assert.equal(h.get('source').value,before.source);assert.deepEqual({...h.snapshot(),status:before.status},before);assert.equal(h.get('source-draft').hidden,true);assert.equal(h.get('export').disabled,false);assert.equal(h.focused(),'source');
+});
+test('canceling Apply retains draft and review; accepting resets mappings only then',()=>{
+ const h=harness();h.edit('First\nSecond');h.label(1,'action');h.check();const before=h.snapshot();h.draft('Different');
+ h.invoke('apply-source',false);assert.deepEqual({...h.snapshot(),status:before.status},before);assert.equal(h.get('source').value,'Different');assert.equal(h.focused(),'apply-source');
+ h.invoke('apply-source',true);assert.equal(h.snapshot().source,'Different');assert.deepEqual(h.snapshot().labels,['unreviewed']);assert.deepEqual(h.snapshot().checked,[]);assert.equal(h.get('source-draft').hidden,true);assert.equal(h.focused(),'source');
+});
+test('reverting text to its draft baseline never resets review',()=>{
+ const h=harness();h.edit('Same');h.label(0,'action');h.check();const before=h.snapshot();h.draft('Same ');h.draft('Same');assert.deepEqual({...h.snapshot(),status:before.status},before);assert.equal(h.get('apply-source').disabled,true);h.invoke('apply-source',true);assert.equal(h.confirmations(),0);
+});
+test('oversized draft is retained on rejected Apply without affecting reviewed state',()=>{
+ const h=harness();h.edit('Keep');h.label(0,'action');h.check();const before=h.snapshot();h.draft('x'.repeat(100001));h.invoke('apply-source',true);assert.equal(h.get('source').value.length,100001);assert.deepEqual({...h.snapshot(),status:before.status},before);assert.match(h.snapshot().status,/Draft retained/);assert.equal(h.confirmations(),0);
+});
+test('pending draft invalidates an older file read without a destructive prompt',async()=>{
+ const h=harness();h.edit('Keep');h.label(0,'action');let resolve;
+ const read=h.get('import').onchange({target:{files:[{size:50,text:()=>new Promise(r=>resolve=r)}],value:'a'}});
+ h.draft('Unapplied');resolve(core.serialize(core.create('Stale')));await read;
+ assert.equal(h.snapshot().source,'Keep');assert.equal(h.get('source').value,'Unapplied');assert.equal(h.confirmations(),0);assert.match(h.snapshot().status,/Workspace changed/);
+});
+test('canceling replacement while drafting preserves both versions',()=>{
+ const h=harness();h.edit('Keep');h.label(0,'action');h.check();h.draft('Draft');const before=h.snapshot();
+ for(const id of ['restart','clear','sample']){h.invoke(id,false);assert.deepEqual(h.snapshot(),before);assert.equal(h.get('source').value,'Draft');assert.equal(h.get('source-draft').hidden,false);}
+});
+test('accepted restart discards draft and resets review of applied source',()=>{
+ const h=harness();h.edit('Keep');h.label(0,'action');h.draft('Draft');h.invoke('restart',true);assert.equal(h.snapshot().source,'Keep');assert.equal(h.get('source').value,'Keep');assert.deepEqual(h.snapshot().labels,['unreviewed']);assert.equal(h.get('source-draft').hidden,true);
+});
+test('accepted import resets draft baseline, rejected import retains it',async()=>{
+ const h=harness();h.draft('Draft');const source='A\r\nB🧠';
+ await h.get('import').onchange({target:{files:[{size:100,text:async()=>core.serialize(core.create(source))}],value:'x'}});
+ assert.equal(h.get('source').value,'Draft');h.invoke('restart',true);h.draft('Draft2');
+ await h.get('import').onchange({target:{files:[{size:100,text:async()=>core.serialize(core.create(source))}],value:'x'}});
+ assert.equal(h.snapshot().source,source);assert.equal(h.get('source').value,source);assert.equal(h.get('source-draft').hidden,true);
+});
+test('review actions during drafting stay linked to applied source and draft survives rerender',()=>{
+ const h=harness();h.edit('First\nSecond');h.draft('Different');h.label(1,'action');h.check();assert.equal(h.get('source').value,'Different');assert.equal(h.get('source-draft').hidden,false);assert.match(h.focusText(),/Second/);h.invoke('discard-source');assert.deepEqual(h.snapshot().labels,['unreviewed','action']);assert.deepEqual(h.snapshot().checked,[true]);
+});
+test('export handler refuses unapplied draft even if invoked directly',()=>{
+ const h=harness();h.draft('Draft');h.invoke('export');assert.match(h.snapshot().status,/Apply or discard/);assert.equal(h.get('source').value,'Draft');
 });
