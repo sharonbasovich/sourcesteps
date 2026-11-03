@@ -51,13 +51,13 @@ try{
   const source='Read 🧠 carefully.\r\nRead 🧠 carefully.\r\nAsk about <script>literal</script>.\r\n';
   const ends=[source.indexOf('\r\n')+2,source.indexOf('\r\n',source.indexOf('\r\n')+2)+2,source.length];
   const state={version:1,source,segments:ends.map((end,i)=>({start:i?ends[i-1]:0,end,label:['reference','action','unclear'][i],done:i===1}))};
-  page.once('dialog',d=>d.accept());await page.locator('#import').setInputFiles({name:'synthetic-review.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(state))});
+  const imported=new Promise(resolve=>page.once('dialog',async d=>{await d.accept();resolve();}));await page.locator('#import').setInputFiles({name:'synthetic-review.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(state))});await imported;await page.waitForFunction(s=>document.querySelector('#context').textContent===s,source);
   const pending=page.waitForEvent('download');await page.locator('#export').click();const download=await pending;
   assert.equal(download.suggestedFilename(),'sourcesteps.json');const saved=new URL('roundtrip-downloaded.json',evidence).pathname;await download.saveAs(saved);
   assert.equal(await download.failure(),null);const bytes=await readFile(saved);assert.deepEqual(JSON.parse(bytes),state);
   await page.reload();assert.notEqual(await page.locator('#context').textContent(),source);
-  page.once('dialog',d=>d.dismiss());await page.locator('#import').setInputFiles(saved);assert.notEqual(await page.locator('#context').textContent(),source);
-  page.once('dialog',d=>d.accept());await page.locator('#import').setInputFiles(saved);
+  const canceled=new Promise(resolve=>page.once('dialog',async d=>{await d.dismiss();resolve();}));await page.locator('#import').setInputFiles(saved);await canceled;assert.notEqual(await page.locator('#context').textContent(),source);
+  const restored=new Promise(resolve=>page.once('dialog',async d=>{await d.accept();resolve();}));await page.locator('#import').setInputFiles(saved);await restored;await page.waitForFunction(s=>document.querySelector('#context').textContent===s,source);
   assert.equal(await page.locator('#context').textContent(),source);assert.equal(await page.locator('#label-0').inputValue(),'reference');assert.equal(await page.locator('#label-1').inputValue(),'action');assert.equal(await page.locator('#label-2').inputValue(),'unclear');assert.equal(await page.getByRole('checkbox').isChecked(),true);
   await page.getByRole('button',{name:'Back to source piece',exact:true}).click();assert.equal(await page.evaluate(()=>document.activeElement.id),'label-1');
   const again=page.waitForEvent('download');await page.locator('#export').click();const second=await again;const secondPath=new URL('roundtrip-redownloaded.json',evidence).pathname;await second.saveAs(secondPath);assert.deepEqual(await readFile(secondPath),bytes);
