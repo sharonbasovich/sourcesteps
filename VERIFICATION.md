@@ -10,4 +10,13 @@ Verification completed November 2, 2026:
 
 Nine automated HTTP Chromium groups passed in CI run 41544069629 on source candidate a2a8418a1e55f232f8a61683b0ff81a40e35798c, covering prior boundary/navigation flows, draft cancel/apply/discard, imported CRLF, and 320/390px reduced-motion layouts. Extracted release tests, deterministic rebuild, manifest and loopback HTTP/CSP checks also passed. Later documentation-only commits should retain their own exact-head CI result. Screenshots under evidence/ are historical v0.1.2-rc1 baseline images, not this draft UI.
 
-No full accessibility conformance, native screen-reader, physical-device, learner study, learning benefit, historical export/re-import retry or direct-file compatibility is claimed. There is no autosave: closing/reloading still loses the session. No hosted deployment is introduced. The existing submitted entry and prior release remain available.
+No full accessibility conformance, native screen-reader, physical-device, learner study, learning benefit, native export/file-chooser workflow or direct-file compatibility is claimed. There is no autosave: closing/reloading still loses the session. No hosted deployment is introduced. The existing submitted entry and prior release remain available.
+
+
+## Downloaded-review recovery verification — November 3, 2026
+
+The automated HTTP Chromium suite now downloads a real review JSON file, saves it to disk, reloads the app to discard the in-memory review, cancels a replacement, selects that same saved file again, and restores it. Assertions preserve exact Unicode and CRLF source, repeated pieces by position, reference/action/unclear labels, a checked action and return-to-source focus. A second real download must be byte-identical. Both JSON files and a restored-review screenshot are retained in the browser-evidence artifact. This closes the automated recovery coverage gap rather than adding an unrelated feature.
+
+All 54 Node tests, ten HTTP Chromium groups, and extracted release manifest/deterministic rebuild/loopback checks passed in [CI run 41626321580](https://github.com/sharonbasovich/sourcesteps/actions/runs/41626321580) at c667d91525d10337ae20989fd3610b087d5de6e5. The first test revision raced asynchronous file reading against dialog registration; it was corrected to wait for dialog completion and restored DOM state before proceeding. No product defect or runtime change is claimed.
+
+This is automated Chromium file input and download evidence, not native operating-system file-chooser, direct-file loading, assistive-technology or learner-study evidence. The app still has no autosave; a download-request announcement alone does not prove that a file was saved. Existing release and submitted entry remain unchanged.
