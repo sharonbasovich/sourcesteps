@@ -14,6 +14,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm test
+      - run: node --test qa/dialog.test.mjs
       - run: npm ci --prefix qa --ignore-scripts
       - run: npx --prefix qa playwright install --with-deps chromium
       - run: node qa/browser.mjs
