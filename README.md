@@ -63,3 +63,7 @@ Release-candidate packaging uses `python scripts/release.py` with existing Pytho
 A single accidental keystroke previously cleared all review progress. Draft edits now leave the applied source, positional mappings, labels, action checks and chosen focus intact. Apply validates before replacing and confirms when reviewed progress would be reset. Discard restores the applied text. A visible draft panel and review-source notice distinguish both versions. Starting or discarding a draft invalidates pending imports; imports and workspace replacements disclose draft loss before replacing it. There is still no autosave, and closing/reloading loses the session.
 
 54 Node tests passed, plus independent repeated-cycle and normalized-CRLF checks. Browser verification for this maintenance is recorded in RELEASE-NOTES.md. Historical evidence images show the earlier baseline, not this draft panel.
+
+### Downloaded review recovery
+
+Automated HTTP Chromium now verifies a real downloaded JSON file can restore exact source, positional labels and checked actions after reload, including canceled replacement and same-file retry. Re-export is byte-identical. See VERIFICATION.md for the exact CI run, retained artifact and native-file-chooser limits. No autosave or runtime behavior has been added.
