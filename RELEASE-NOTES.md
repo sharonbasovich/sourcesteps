@@ -1,3 +1,13 @@
+# SourceSteps 0.1.4-rc1 - best-effort page-exit warning
+
+This release contains the independently reviewed page-exit warning candidate and prior downloaded-review recovery tests. It preserves exact source text and manual review semantics. Export does not clear exit protection, and no autosave is provided. Browser-controlled prompts may be skipped on mobile closure, crashes or process termination.
+
+Local release validation on November 7, 2026: 62 Node tests, six dialog-helper tests, deterministic package rebuild, extraction, manifests and loopback HTTP/CSP checks. The runtime candidate previously passed 11 dedicated headed Chrome groups and ten existing browser groups on November 5. New hosted GitHub verification is billing-blocked and is not claimed passed. Native OS file chooser, physical devices, screen readers and direct-file operation remain unverified. Historical evidence images are not screenshots of this release.
+
+The following sections preserve historical verification records.
+
+---
+
 # SourceSteps 0.1.3-rc1 — source draft candidate
 
 Typing into the source no longer immediately destroys reviewed progress. An unapplied draft is separate from the exact applied source; existing labels, checks and selected action remain linked to that applied source. Apply validates the draft, then confirms before resetting existing review. Discard restores the original source and review, including imported CRLF text. Workspace replacement prompts disclose draft loss; editing or discarding invalidates pending file reads. Export is disabled while a draft is pending, avoiding silently exporting an older source.
@@ -20,3 +30,12 @@ The automated HTTP Chromium suite now downloads a real review JSON file, saves i
 All 54 Node tests, ten HTTP Chromium groups, and extracted release manifest/deterministic rebuild/loopback checks passed in [CI run 41626321580](https://github.com/sharonbasovich/sourcesteps/actions/runs/41626321580) at c667d91525d10337ae20989fd3610b087d5de6e5. The first test revision raced asynchronous file reading against dialog registration; it was corrected to wait for dialog completion and restored DOM state before proceeding. No product defect or runtime change is claimed.
 
 This is automated Chromium file input and download evidence, not native operating-system file-chooser, direct-file loading, assistive-technology or learner-study evidence. The app still has no autosave; a download-request announcement alone does not prove that a file was saved. Existing release and submitted entry remain unchanged.
+
+
+## Unpublished page-exit warning candidate — November 5, 2026
+
+This local candidate requests the browser's standard page-exit warning for unapplied drafts or reviews whose full exact state differs from the recreatable sample, empty workspace and most recently confirmed imported file. Labels, checks and source boundaries count; focus selection and expanded details alone do not. Immutable canonical strings prevent baseline aliasing when review operations mutate state. Draft comparison retains the textarea-normalized baseline while imported source remains exact.
+
+Export initiation never clears protection. Import rejection, cancellation, supersession and stale reads do not advance recovery keys. Restart and draft discard recalculate protection against the same recovery keys. The visible notice explains export and best-effort limits; it does not promise a saved session. Browser-controlled prompts can require user interaction and can be skipped on mobile closure or process termination. No autosave, storage or runtime network operation was added.
+
+Baseline Chrome 156.0.8078.79 silently discarded a label, check and Unicode draft on reload at main 0c9ceb23db69fb06fd0963aec054fc67e84520c4. The candidate has 62 passing Node regressions and 6 passing bounded-dialog helper tests. Eleven dedicated headed Chrome groups and ten existing browser groups passed. Deterministic packaging, extraction, manifest, 62 packaged tests and loopback HTTP/CSP checks passed using an isolated test port to preserve an unrelated server. Receipts live beside the candidate delivery; historical evidence images bundled by the existing packager remain historical. Native file chooser, physical devices, screen readers and direct-file operation are not claimed verified. This candidate is not published and does not change the existing submission, release or film.

@@ -1,11 +1,25 @@
 import {create,sample,split,merge,label,toggle,stats,serialize,parse} from './core.js';
 const $=id=>document.getElementById(id);
 let state=create(sample),active=null,epoch=0,importRequest=0,draftBaseline='';
+// Canonical strings are immutable even though core review operations mutate state.
+// Keep only the latest confirmed import; requesting an export cannot confirm a save.
+const sampleKey=serialize(state),emptyKey=serialize(create(''));
+let importedKey=null,exitWarning=false;
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,fn,cls)=>{const b=el('button',text,cls);b.type='button';b.addEventListener('click',fn);return b;};
 function announce(text){$('status').textContent=text;}
 function act(fn,message,focusId){try{state=fn();epoch++;render();announce(message);if(focusId)$(focusId)?.focus();}catch(e){announce(e.message);}}
 function hasDraft(){return $('source').value!==draftBaseline;}
+function warnBeforeExit(event){event.preventDefault();event.returnValue='';}
+function syncExitWarning(){
+ const key=serialize(state),needed=hasDraft()||(key!==sampleKey&&key!==emptyKey&&key!==importedKey);
+ if(needed!==exitWarning){
+  if(needed)window.addEventListener('beforeunload',warnBeforeExit);
+  else window.removeEventListener('beforeunload',warnBeforeExit);
+  exitWarning=needed;
+ }
+ $('exit-warning').hidden=!needed;
+}
 function syncDraft(){
  const pending=hasDraft();
  $('source-draft').hidden=!pending;
@@ -13,6 +27,7 @@ function syncDraft(){
  $('discard-source').disabled=!pending;
  $('review-state').textContent=pending?'Review below still uses the applied source. Your draft has not changed any labels or checks.':'Review uses the applied source.';
  $('export').disabled=!state.source.length||pending;
+ syncExitWarning();
 }
 function resetDraft(){ $('source').value=state.source;draftBaseline=$('source').value;syncDraft(); }
 function replace(source,message){state=create(source);active=null;epoch++;resetDraft();render();announce(message);}
@@ -57,5 +72,5 @@ $('sample').onclick=()=>confirmReplace('Replace this workspace with the syntheti
 $('clear').onclick=()=>confirmReplace('Clear all source and progress? Export first to keep your work.',()=>replace('','Workspace cleared.'));
 $('restart').onclick=()=>confirmReplace('Restart all labels and checks, keeping the exact source?',()=>{state=create(state.source);active=null;epoch++;resetDraft();render();announce('Review restarted. Exact source preserved; all pieces are unreviewed.');});
 $('export').onclick=()=>{if(hasDraft()){announce('Apply or discard the source draft before exporting.');return;}const url=URL.createObjectURL(new Blob([serialize(state)],{type:'application/json'}));const a=el('a');a.href=url;a.download='sourcesteps.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Export requested. Check browser downloads for sourcesteps.json; it contains your full source.');};
-$('import').onchange=async e=>{const file=e.target.files[0],revision=epoch,request=++importRequest;e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('File exceeds the 2 MB limit.');const text=await file.text();if(request!==importRequest)return;const incoming=parse(text);if(revision!==epoch)throw Error('Workspace changed while reading. Import again when ready.');confirmReplace('Replace this workspace with the validated local file? Export first to keep your work.',()=>{state=incoming;active=null;epoch++;resetDraft();render();announce('Local file imported. Exact source and validated mappings restored.');});}catch(error){if(request===importRequest)announce(`Import rejected. ${error.message}`);}};
+$('import').onchange=async e=>{const file=e.target.files[0],revision=epoch,request=++importRequest;e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('File exceeds the 2 MB limit.');const text=await file.text();if(request!==importRequest)return;const incoming=parse(text);if(revision!==epoch)throw Error('Workspace changed while reading. Import again when ready.');confirmReplace('Replace this workspace with the validated local file? Export first to keep your work.',()=>{importedKey=serialize(incoming);state=incoming;active=null;epoch++;resetDraft();render();announce('Local file imported. Exact source and validated mappings restored.');});}catch(error){if(request===importRequest)announce(`Import rejected. ${error.message}`);}};
 render();
