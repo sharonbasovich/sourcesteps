@@ -10,6 +10,8 @@ const source = await readFile(new URL('../app.js', import.meta.url),'utf8');
 const body = source.replace(/^import [^\n]+\n/,'');
 assert.notEqual(body,source,'App import must be replaced only for this harness');
 function harness(){
+ const listeners=new Set();
+ const window={addEventListener:(name,fn)=>{assert.equal(name,"beforeunload");listeners.add(fn);},removeEventListener:(name,fn)=>{assert.equal(name,"beforeunload");listeners.delete(fn);}};
  const ids=new Map();let answer=false,confirmations=0,focused=null;
  class Element {
   constructor(tag){this.tagName=tag;this.children=[];this.handlers={};this._text='';this.value='';this.checked=false;}
@@ -19,15 +21,18 @@ function harness(){
   append(...nodes){this.children.push(...nodes);}
   replaceChildren(...nodes){this._text='';this.children=nodes;}
   addEventListener(name,fn){this.handlers[name]=fn;}
+  click(){this.handlers.click?.();}
   focus(){focused=this.id;}
  }
- for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state']){const x=new Element('div');x.id=id;}
+ for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state','exit-warning']){const x=new Element('div');x.id=id;}
  const document={getElementById:id=>ids.get(id),createElement:tag=>new Element(tag)};
- vm.runInNewContext(body,{...core,document,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob},{filename:'app.js'});
+ vm.runInNewContext(body,{...core,document,window,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob},{filename:'app.js'});
  const get=id=>ids.get(id);
  const visit=(node,predicate)=>node.children.flatMap(x=>[...(predicate(x)?[x]:[]),...visit(x,predicate)]);
  const snapshot=()=>({source:get('context').textContent,labels:visit(get('segments'),x=>x.tagName==='select').map(x=>x.value),checked:visit(get('focus-content'),x=>x.tagName==='input').map(x=>x.checked),summary:get('summary').textContent,status:get('status').textContent});
- return {get,snapshot,confirmations:()=>confirmations,focused:()=>focused,
+ return {get,snapshot,
+  warning(){let prevented=false;const event={returnValue:undefined,preventDefault(){prevented=true;}};for(const fn of listeners)fn(event);assert.ok(listeners.size<=1,"At most one exit listener");assert.equal(prevented,!get("exit-warning").hidden);if(prevented)assert.equal(event.returnValue,"");return prevented;},
+  importState(incoming,confirmed=true){answer=confirmed;return get("import").onchange({target:{files:[{size:100,text:async()=>core.serialize(incoming)}],value:"synthetic.json"}});},confirmations:()=>confirmations,focused:()=>focused,
   draft(text){get('source').value=text;get('source').handlers.input();},
   edit(text){get('source').value=text;get('source').handlers.input();const prior=answer;answer=true;get('apply-source').onclick();answer=prior;},
   label(i,value){const x=get(`label-${i}`);x.value=value;x.handlers.change();},
@@ -232,4 +237,76 @@ test('review actions during drafting stay linked to applied source and draft sur
 });
 test('export handler refuses unapplied draft even if invoked directly',()=>{
  const h=harness();h.draft('Draft');h.invoke('export');assert.match(h.snapshot().status,/Apply or discard/);assert.equal(h.get('source').value,'Draft');
+});
+
+test('exit warning attaches only for unretained data and removes through repeated clean cycles',()=>{
+ const h=harness();assert.equal(h.warning(),false);
+ for(let i=0;i<4;i++){
+  h.label(0,'action');assert.equal(h.warning(),true);h.check();assert.equal(h.warning(),true);
+  h.label(0,'unreviewed');assert.equal(h.warning(),false);
+  h.draft(core.sample+' ');assert.equal(h.warning(),true);h.draft(core.sample);assert.equal(h.warning(),false);
+  h.draft('Draft');h.invoke('discard-source');assert.equal(h.warning(),false);
+  h.label(1,'reference');h.invoke('restart',true);assert.equal(h.warning(),false);
+ }
+ h.invoke('clear',true);assert.equal(h.warning(),false);h.invoke('sample',true);assert.equal(h.warning(),false);
+});
+
+test('custom applied source remains protected across export, discard and restart',()=>{
+ const h=harness();h.edit('Private source 🧠');assert.equal(h.warning(),true);
+ h.invoke('export');assert.match(h.snapshot().status,/Export requested/);assert.equal(h.warning(),true);
+ h.draft('Another draft');h.invoke('discard-source');assert.equal(h.warning(),true);
+ h.invoke('restart',true);assert.equal(h.warning(),true);h.invoke('restart',true);assert.equal(h.warning(),true);
+ h.invoke('sample',false);assert.equal(h.warning(),true);h.invoke('sample',true);assert.equal(h.warning(),false);
+});
+
+test('successful import snapshots exact mappings immutably; reverting changes returns clean',async()=>{
+ const h=harness(),incoming=core.create('First\r\nSecond 🧠');core.label(incoming,0,'reference');core.label(incoming,1,'action');core.toggle(incoming,1);
+ await h.importState(incoming);assert.equal(h.warning(),false);assert.equal(h.snapshot().source,incoming.source);
+ h.focusAction(1);h.back();assert.equal(h.warning(),false);
+ h.check();assert.equal(h.warning(),true);h.check();assert.equal(h.warning(),false);
+ h.label(0,'unclear');assert.equal(h.warning(),true);h.label(0,'reference');assert.equal(h.warning(),false);
+ h.draft('Draft');assert.equal(h.warning(),true);h.invoke('discard-source');assert.equal(h.warning(),false);
+ h.invoke('restart',true);assert.equal(h.warning(),true);h.invoke('export');assert.equal(h.warning(),true);
+});
+
+test('same piece counts with different boundaries still require exit protection',async()=>{
+ const h=harness(),incoming=core.create('abcdef\nghij');await h.importState(incoming);assert.equal(h.warning(),false);
+ h.boundary(0,'Merge with next piece');h.boundary(0,'Split piece',3);
+ assert.equal(h.snapshot().labels.length,incoming.segments.length);assert.equal(h.warning(),true);
+ h.boundary(0,'Merge with next piece');h.boundary(0,'Split piece',7);assert.equal(h.warning(),false);
+});
+
+test('only the latest confirmed import is a recovery baseline; sample and empty remain recreatable',async()=>{
+ const h=harness();await h.importState(core.create('A'));assert.equal(h.warning(),false);
+ await h.importState(core.create('B'));assert.equal(h.warning(),false);h.edit('A');assert.equal(h.warning(),true);
+ h.edit('B');assert.equal(h.warning(),false);h.invoke('clear',true);assert.equal(h.warning(),false);
+ h.invoke('sample',true);assert.equal(h.warning(),false);h.edit('B');assert.equal(h.warning(),false);
+});
+
+test('canceled, malformed and oversized imports never establish recoverability',async()=>{
+ const h=harness(),incoming=core.create('Keep me');h.edit(incoming.source);
+ await h.importState(incoming,false);assert.equal(h.warning(),true);
+ for(const file of [{size:2000001,text:async()=>core.serialize(incoming)},{size:1,text:async()=>'{'}]){
+  await h.get('import').onchange({target:{files:[file],value:'invalid'}});assert.equal(h.warning(),true);
+ }
+ await h.importState(incoming,true);assert.equal(h.warning(),false);
+});
+
+test('stale and superseded imports cannot clean current work or replace the recovery key',async()=>{
+ const h=harness();await h.importState(core.create('Retained'));h.edit('Unretained');let finish;
+ const read=h.get('import').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>finish=resolve)}],value:'old'}});
+ h.draft('Pending');finish(core.serialize(core.create('Unretained')));await read;assert.equal(h.warning(),true);
+ h.invoke('discard-source');assert.equal(h.warning(),true);h.edit('Retained');assert.equal(h.warning(),false);
+ const old=h.get('import').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>finish=resolve)}],value:'old'}});
+ await h.get('import').onchange({target:{files:[],value:''}});finish(core.serialize(core.create('Superseded')));await old;
+ h.edit('Superseded');assert.equal(h.warning(),true);h.edit('Retained');assert.equal(h.warning(),false);
+});
+
+test('canceled or invalid Apply protects both draft and existing reviewed work',async()=>{
+ const h=harness(),incoming=core.create('Read');core.label(incoming,0,'action');await h.importState(incoming);
+ h.draft('Changed');h.invoke('apply-source',false);assert.equal(h.warning(),true);assert.equal(h.get('source').value,'Changed');
+ h.invoke('discard-source');assert.equal(h.warning(),false);
+ h.draft('x'.repeat(100001));h.invoke('apply-source',true);assert.equal(h.warning(),true);assert.match(h.snapshot().status,/Draft retained/);
+ h.invoke('discard-source');assert.equal(h.warning(),false);
+ h.draft('Changed');h.invoke('apply-source',true);assert.equal(h.warning(),true);
 });
