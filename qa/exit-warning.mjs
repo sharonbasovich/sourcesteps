@@ -23,11 +23,13 @@ async function imported(page,state,answer='accept'){
 async function confirm(page,id,answer='accept'){await withDialog(page,answer,()=>page.locator('#'+id).click());}
 async function run(name,fn,options={}){
  const context=await browser.newContext({viewport:{width:1280,height:900},...options});const page=await context.newPage();page.setDefaultTimeout(7000);
+ // Navigation can be slower on shared runners; keep the action budget separate.
+ page.setDefaultNavigationTimeout(30000);
  const errors=[],external=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith(origin)&&!r.url().startsWith('blob:'))external.push(r.url());});
  try{await page.goto(origin);await fn(page);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);results.push({name,status:'passed'});console.log('PASS '+name);}finally{await context.close();}
 }
 try{
- browser=await chromium.launch({channel:'chrome',headless:process.env.HEADED!=='1'});
+ browser=await chromium.launch({channel:process.env.SOURCESTEPS_BROWSER||'chrome',headless:process.env.HEADED!=='1'});
  await run('unchanged sample and focus/details alone reload without warning',async page=>{
   await page.locator('#source').click();await page.locator('summary').first().click();await warning(page,false);await cleanReload(page);
   const state=create('Read\nWrite');label(state,0,'action');label(state,1,'action');await imported(page,state);
@@ -88,5 +90,5 @@ try{
   await page.locator('#discard-source').focus();await page.keyboard.press('Enter');await warning(page,false);assert.equal(await page.evaluate(()=>document.activeElement.id),'source');
   await page.locator('#label-0').selectOption('action');await warning(page,true);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:fileURLToPath(new URL(`warning-${width}.png`,output)),fullPage:true});await reload(page,'dismiss');
  },{viewport:{width,height:844},reducedMotion:'reduce'});
- await writeFile(new URL('results.json',output),JSON.stringify({channel:'chrome',browser:browser.version(),headed:process.env.HEADED==='1',results,limits:['Synthetic setInputFiles only; native picker deliberately not exercised.','beforeunload is browser-controlled and best effort; no mobile/process-kill/save-completion guarantee.','No external requests observed.']},null,2));
+ await writeFile(new URL('results.json',output),JSON.stringify({channel:process.env.SOURCESTEPS_BROWSER||'chrome',browser:browser.version(),headed:process.env.HEADED==='1',results,limits:['Synthetic setInputFiles only; native picker deliberately not exercised.','beforeunload is browser-controlled and best effort; no mobile/process-kill/save-completion guarantee.','No external requests observed.']},null,2));
 }catch(error){await writeFile(new URL('failure.txt',output),String(error.stack));throw error;}finally{await browser?.close();server.kill();}

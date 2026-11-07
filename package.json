@@ -1,1 +1,13 @@
-{"name":"sourcesteps","version":"0.1.4-rc1","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.js","start":"node server.js"}}
+{
+  "name": "sourcesteps",
+  "version": "0.1.4-rc1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "node server.js",
+    "test:dialog": "node --test qa/dialog.test.mjs",
+    "test:exit": "node qa/exit-warning.mjs",
+    "test:browser": "node qa/browser.mjs && npm run test:exit"
+  }
+}
