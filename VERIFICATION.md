@@ -1,3 +1,15 @@
+# SourceSteps 0.1.5-rc1 - unresolved-source navigation
+
+Version 0.1.5-rc1 adds direct entry to unreviewed or unclear source and a per-piece next-review route that wraps in source order. Relabeling keeps that route available. Navigation focuses the exact source label without changing source text, labels, action checks, selected action, exit-warning protection or pending drafts. All pieces remain visible. An all-labeled state explicitly does not mean assignment completion.
+
+November 7 local verification: 68 application tests and six dialog-helper tests passed. Three focused Chrome navigation groups passed at 1280, 390 and 320 CSS pixels with reduced motion, covering keyboard continuation after relabeling, a single remaining piece, drafts/discard, all-labeled guidance, reopened uncertainty, exact source and action focus preservation, page errors and horizontal overflow. These are not physical-device or screen-reader tests. Two long-piece groups at 390 and 320 pixels with the default motion setting also passed, for five browser groups total. They verify the Read piece from start control focuses a visible heading and Tab returns to its label without changing source. The deterministic local package rebuild, extraction, all 24 file contents/manifests, 68 packaged tests and default-port loopback HTTP/CSP checks passed. Independent review approved the scoped runtime, keyboard/navigation experience and QA structure, including the long-piece remedy; it independently reran all 74 Node/helper tests and five Chrome groups.
+
+The focused suite is included in the existing combined browser command and CI path. The full general/exit browser suites were not rerun for this version because they contain held file operations. No native picker, browser import or browser download was attempted in this pass. Historical regression evidence below is not a fresh run. No hosted CI pass, real-learner validation, learning gain, accessibility conformance, autosave or semantic completeness claim is made.
+
+Prior releases and assets remain unchanged. The following sections preserve their historical verification records.
+
+---
+
 # Private SourceSteps page-exit warning verification — November 5, 2026
 
 Base: 0c9ceb23db69fb06fd0963aec054fc67e84520c4 (remote main verified through git ls-remote before editing). Baseline app blob: 37c43f5fe94eeb88b8640d25419554483ae42965. All implementation happened in a new candidate checkout; four older native checkouts were read-only reconciled. Their original app hashes/statuses and untracked dist directory were preserved.
