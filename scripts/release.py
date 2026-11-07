@@ -10,12 +10,12 @@ import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
-NAME = 'SourceSteps-0.1.5-rc1'
+NAME = 'SourceSteps-0.1.6-rc1'
 FILES = [
     'index.html', 'style.css', 'app.js', 'core.js', 'server.js', 'package.json',
     'README.md', 'LICENSE', 'ATTRIBUTION.md', 'DEMO.md', 'RELEASE-NOTES.md',
     'scripts/release.py', 'tests/core.test.js', 'tests/flows.test.js',
-    'tests/limits.test.js', 'tests/import-boundaries.test.js',
+    'tests/limits.test.js', 'tests/import-boundaries.test.js', 'tests/split-selector.test.js',
     'tests/make-fixtures.js', 'tests/BROWSER-CHECKLIST.md',
     'tests/fixtures/valid.json', 'tests/fixtures/invalid.json',
     'evidence/desktop.jpg', 'evidence/mobile-390.jpg',

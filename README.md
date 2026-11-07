@@ -115,3 +115,11 @@ Focused navigation browser checks (no file-picker, import or download steps): `n
 The review-navigation suite defaults to installed Google Chrome, like the exit-warning suite, and respects `SOURCESTEPS_BROWSER`. It uses isolated loopback port 15173 (`SOURCESTEPS_REVIEW_QA_PORT` overrides it). `npm run test:review` runs it independently; `npm run test:browser` and the existing CI job include it automatically.
 
 For a long piece, **Read piece from start** focuses its heading and brings the beginning back into view. Tab returns to that piece's label, without changing review state.
+
+## Split-point preview (0.1.6-rc1)
+
+The noneditable split-point slider provides a preview before committing a split. Arrow keys move between valid UTF-16 boundaries; CRLF and surrogate pairs stay together. The numeric offset remains available and rejects invalid boundaries as before. Preview quotes show up to 60 source units on either side, with explicit CR/LF/tab escapes and ellipses for omitted context. Combining marks may be split, matching the existing model; inspect the preview before committing. Selecting a position never applies a source draft or changes review labels. Splitting and merging retain their existing reset behavior.
+
+Native Undo/Redo remains browser-managed, including when focus is on the selector: explicit Undo can undo the most recent source edit and Redo can restore it. No new edit history or app Undo feature is added. Run `node qa/split-selector.mjs` with the existing QA Playwright dependency and installed Chrome for the focused loopback suite. No native file import/download verification is claimed.
+
+Release verification: 71 Node application/model tests, six dialog-helper tests, five focused Chrome selector groups and five navigation groups passed. Full general/exit browser suites and native file operations were not rerun. Physical-touch and screen-reader testing remain unverified. See RELEASE-NOTES.md for scope and historical evidence. Browser QA commands apply to the source checkout; the downloadable runtime ZIP intentionally omits QA dependencies.

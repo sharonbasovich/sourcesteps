@@ -1,3 +1,19 @@
+# SourceSteps 0.1.6-rc1 - noneditable split-point preview
+
+A native noneditable slider selects valid split boundaries without counting UTF-16 offsets. A precise before/after preview uses quoted text, visible CR/LF/tab escapes and bounded context. The numeric offset remains available. Surrogate pairs and CRLF stay together; combining marks may still be split, matching the existing model. Preview and slider movement do not change source, draft, labels or action checks. Successful splits and merges retain their existing affected-label reset behavior, and unresolved-source navigation remains available.
+
+Native Undo/Redo retains normal browser behavior: explicit Undo can undo the latest source edit even when another control is focused, and Redo can restore it. The slider is not an editable text field; no history interception, global restoration workaround, app Undo stack or autosave was added.
+
+November 7 local verification: 71 application/model tests and six dialog-helper tests passed. Five focused installed-Chrome selector groups and five existing review-navigation groups passed. They cover keyboard/mouse selection, native source Undo/Redo round trips, pending drafts, repeated split/merge, canceled Apply, rejected offsets/500-piece limit, exact CRLF/lone-CR/emoji/combining source, unresolved navigation and 320/390/1280px layouts. Desktop and narrow screenshots were visually inspected. Independent exact-tree runtime review approved the candidate.
+
+CRLF/lone-CR browser coverage substitutes only the synthetic startup sample literal; it is not native imported-file acceptance. The full general/exit suites and native file operations were not rerun. Physical touch devices, screen readers, real learners and accessibility conformance remain unverified. No hosted CI success is claimed. The selector suite is wired into the combined browser command for future authorized runs; adding that wiring does not mean the combined command was run here.
+
+The deterministic source ZIP uses an explicit allowlist, includes the new model test, and excludes browser dependencies, private reports and temporary probes. The local packaging workflow passed a byte-identical rebuild, extraction of all 25 files, per-file manifest verification, 71 packaged tests and loopback HTTP/CSP checks. See the matching verification.json and packaged-tests.tap for actual package results. Historical bundled images remain explicitly historical. Source-checkout-only QA commands require the separate QA harness and installed dependencies; they are not part of the no-install runtime ZIP.
+
+No hosted demo, runtime dependency, network access, credentials or account setup was introduced. Prior releases, assets and the submitted entry remain unchanged. Historical verification follows.
+
+---
+
 # SourceSteps 0.1.5-rc1 - unresolved-source navigation
 
 Version 0.1.5-rc1 adds direct entry to unreviewed or unclear source and a per-piece next-review route that wraps in source order. Relabeling keeps that route available. Navigation focuses the exact source label without changing source text, labels, action checks, selected action, exit-warning protection or pending drafts. All pieces remain visible. An all-labeled state explicitly does not mean assignment completion.

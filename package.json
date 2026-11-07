@@ -1,6 +1,6 @@
 {
   "name": "sourcesteps",
-  "version": "0.1.5-rc1",
+  "version": "0.1.6-rc1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "start": "node server.js",
     "test:dialog": "node --test qa/dialog.test.mjs",
     "test:exit": "node qa/exit-warning.mjs",
-    "test:browser": "node qa/browser.mjs && npm run test:exit && npm run test:review",
-    "test:review": "node qa/review-navigation.mjs"
+    "test:browser": "node qa/browser.mjs && npm run test:exit && npm run test:review && npm run test:selector",
+    "test:review": "node qa/review-navigation.mjs",
+    "test:selector": "node qa/split-selector.mjs"
   }
 }

@@ -1,3 +1,19 @@
+# SourceSteps 0.1.6-rc1 - noneditable split-point preview
+
+A native noneditable slider selects valid split boundaries without counting UTF-16 offsets. A precise before/after preview uses quoted text, visible CR/LF/tab escapes and bounded context. The numeric offset remains available. Surrogate pairs and CRLF stay together; combining marks may still be split, matching the existing model. Preview and slider movement do not change source, draft, labels or action checks. Successful splits and merges retain their existing affected-label reset behavior, and unresolved-source navigation remains available.
+
+Native Undo/Redo retains normal browser behavior: explicit Undo can undo the latest source edit even when another control is focused, and Redo can restore it. The slider is not an editable text field; no history interception, global restoration workaround, app Undo stack or autosave was added.
+
+November 7 local verification: 71 application/model tests and six dialog-helper tests passed. Five focused installed-Chrome selector groups and five existing review-navigation groups passed. They cover keyboard/mouse selection, native source Undo/Redo round trips, pending drafts, repeated split/merge, canceled Apply, rejected offsets/500-piece limit, exact CRLF/lone-CR/emoji/combining source, unresolved navigation and 320/390/1280px layouts. Desktop and narrow screenshots were visually inspected. Independent exact-tree runtime review approved the candidate.
+
+CRLF/lone-CR browser coverage substitutes only the synthetic startup sample literal; it is not native imported-file acceptance. The full general/exit suites and native file operations were not rerun. Physical touch devices, screen readers, real learners and accessibility conformance remain unverified. No hosted CI success is claimed. The selector suite is wired into the combined browser command for future authorized runs; adding that wiring does not mean the combined command was run here.
+
+The deterministic source ZIP uses an explicit allowlist, includes the new model test, and excludes browser dependencies, private reports and temporary probes. The local packaging workflow passed a byte-identical rebuild, extraction of all 25 files, per-file manifest verification, 71 packaged tests and loopback HTTP/CSP checks. See the matching verification.json and packaged-tests.tap for actual package results. Historical bundled images remain explicitly historical. Source-checkout-only QA commands require the separate QA harness and installed dependencies; they are not part of the no-install runtime ZIP.
+
+No hosted demo, runtime dependency, network access, credentials or account setup was introduced. Prior releases, assets and the submitted entry remain unchanged. Historical verification follows.
+
+---
+
 # SourceSteps 0.1.5-rc1 - unresolved-source navigation
 
 Version 0.1.5-rc1 adds direct entry to unreviewed or unclear source and a per-piece next-review route that wraps in source order. Relabeling keeps that route available. Navigation focuses the exact source label without changing source text, labels, action checks, selected action, exit-warning protection or pending drafts. All pieces remain visible. An all-labeled state explicitly does not mean assignment completion.
@@ -10,36 +26,15 @@ Prior releases and assets remain unchanged. The following sections preserve thei
 
 ---
 
-# Private SourceSteps page-exit warning verification — November 5, 2026
+# SourceSteps 0.1.4-rc1 - best-effort page-exit warning
 
-Base: 0c9ceb23db69fb06fd0963aec054fc67e84520c4 (remote main verified through git ls-remote before editing). Baseline app blob: 37c43f5fe94eeb88b8640d25419554483ae42965. All implementation happened in a new candidate checkout; four older native checkouts were read-only reconciled. Their original app hashes/statuses and untracked dist directory were preserved.
+This release contains the independently reviewed page-exit warning candidate and prior downloaded-review recovery tests. It preserves exact source text and manual review semantics. Export does not clear exit protection, and no autosave is provided. Browser-controlled prompts may be skipped on mobile closure, crashes or process termination.
 
-Baseline reproduction used installed Chrome 156.0.8078.79: after labeling, checking and typing an unapplied Unicode draft, reload silently restored the sample with no exit dialog. Existing 54 Node tests passed on that baseline.
+Local release validation on November 7, 2026: 62 Node tests, six dialog-helper tests, deterministic package rebuild, extraction, manifests and loopback HTTP/CSP checks. The runtime candidate previously passed 11 dedicated headed Chrome groups and ten existing browser groups on November 5. New hosted GitHub verification is billing-blocked and is not claimed passed. Native OS file chooser, physical devices, screen readers and direct-file operation remain unverified. Historical evidence images are not screenshots of this release.
 
-The candidate compares immutable canonical exact-source/mapping strings with the built-in sample, empty state and latest confirmed import. Draft dirty state still compares against resetDraft's textarea-normalized value. It attaches one beforeunload listener only while protection is needed, removes it when clean, and never advances a baseline on export. Only source/label/check/boundary data are covered. Focus selection/details alone remain clean. Pending import reads are not retained. Core transformations, server restrictions, dependencies and exact-source serialization are unchanged.
-
-Passed:
-- 62 Node tests (all 54 existing plus 8 multi-case warning regressions), including cancel/reject/superseded/stale imports, immutable label/check baselines, same-count changed boundaries, repeated resets, draft discard/apply and custom source retained protection.
-- 6 bounded-dialog helper tests.
-- 11 dedicated groups in actual installed headed Chrome 156.0.8078.79. Cancel preserved exact source/review/draft and usable focus controls; Leave reloaded. Fresh-target close Cancel kept the tab/draft; Leave closed it. Synthetic imports preserved CRLF/Unicode, textarea normalization and exact exported state. Export request, canceled download and completed download did not clear dirty protection. Repeated dirty/clean cycles, canceled/invalid/oversized operations and 320/390px reduced-motion keyboard layouts passed. No external requests/page errors observed in this suite.
-- All 10 existing browser regression groups, using installed Chrome and isolated loopback port 14174, including real downloaded-file recovery and byte-identical re-export.
-- Syntax checks for app.js, core.js, server.js and both browser scripts; git diff --check.
-- Existing deterministic release packager checks via the adjacent package-isolated.py wrapper: only test port 4173 was substituted with 14175 so an unrelated server was left alone. The original scripts/release.py and server.js bytes are packaged unchanged. Rebuild bytes, extraction, all manifests, 62 packaged tests, 200/404 static allowlist, CSP and exact HTTP bodies passed. The generated archive retains the existing candidate filename; it is local only and is not the published release.
-- Independent internal read-only implementation review found no actionable runtime defect and independently reran the 62+6 tests. Independent harness review found an occupied-port identity risk in the prior polling harness. It was fixed with a bounded owned-child startup check and exact fetched app.js byte comparison in qa/server.mjs; both suites were rerun. The occupied-port rejection check is recorded in the delivery receipt.
-- Desktop, 320px and 390px screenshots inspected locally: warning text wraps, controls remain usable, no horizontal overflow. Existing typography, colors, border and reduced-motion rules were preserved. No animation added.
-
-Corrected verification attempts (not product failures): the first baseline launcher found unrelated port 4173 busy; a dedicated test port resolved it. Windows URL.pathname paths in the prior QA script were not native filesystem paths; fileURLToPath fixed them. A canceled reload can leave Playwright waiting for navigation; the helper permits its bounded timeout only after exactly one observed and dismissed beforeunload event. Repeating DevTools Page.close on the same canceled target failed to emit a second dialog; close Cancel and Leave are instead tested on separate fresh targets. The first temporary packaging wrapper substituted its port in the wrong order; corrected wrapper passed all checks. No production behavior was altered to accommodate these harness issues.
-
-Limits / not run:
-- Native OS file chooser deliberately not retried after the earlier uncertain cancellation; only synthetic Playwright setInputFiles was used.
-- Physical devices, Safari/Firefox, screen readers, direct-file operation, mobile process killing and real-learner validation were not tested.
-- Browsers choose prompt wording and may require prior interaction; mobile closures/crashes/process termination can skip prompts. No autosave or save-completion guarantee. Latest-import recoverability assumes the selected file remains available. Selecting Leave deliberately loses in-tab changes.
-- Exact default-port packaging could not run while another process used 4173; isolated-port equivalent passed. No unrelated process was terminated.
-- No hosted CI, push, PR, publication, merge, deployment, billing/access change, submission/release/film modification or screenshot/trace/media upload.
+The following sections preserve historical verification records.
 
 ---
-
-Historical verification follows.
 
 # SourceSteps 0.1.3-rc1 — source draft candidate
 
@@ -63,3 +58,12 @@ The automated HTTP Chromium suite now downloads a real review JSON file, saves i
 All 54 Node tests, ten HTTP Chromium groups, and extracted release manifest/deterministic rebuild/loopback checks passed in [CI run 41626321580](https://github.com/sharonbasovich/sourcesteps/actions/runs/41626321580) at c667d91525d10337ae20989fd3610b087d5de6e5. The first test revision raced asynchronous file reading against dialog registration; it was corrected to wait for dialog completion and restored DOM state before proceeding. No product defect or runtime change is claimed.
 
 This is automated Chromium file input and download evidence, not native operating-system file-chooser, direct-file loading, assistive-technology or learner-study evidence. The app still has no autosave; a download-request announcement alone does not prove that a file was saved. Existing release and submitted entry remain unchanged.
+
+
+## Unpublished page-exit warning candidate — November 5, 2026
+
+This local candidate requests the browser's standard page-exit warning for unapplied drafts or reviews whose full exact state differs from the recreatable sample, empty workspace and most recently confirmed imported file. Labels, checks and source boundaries count; focus selection and expanded details alone do not. Immutable canonical strings prevent baseline aliasing when review operations mutate state. Draft comparison retains the textarea-normalized baseline while imported source remains exact.
+
+Export initiation never clears protection. Import rejection, cancellation, supersession and stale reads do not advance recovery keys. Restart and draft discard recalculate protection against the same recovery keys. The visible notice explains export and best-effort limits; it does not promise a saved session. Browser-controlled prompts can require user interaction and can be skipped on mobile closure or process termination. No autosave, storage or runtime network operation was added.
+
+Baseline Chrome 156.0.8078.79 silently discarded a label, check and Unicode draft on reload at main 0c9ceb23db69fb06fd0963aec054fc67e84520c4. The candidate has 62 passing Node regressions and 6 passing bounded-dialog helper tests. Eleven dedicated headed Chrome groups and ten existing browser groups passed. Deterministic packaging, extraction, manifest, 62 packaged tests and loopback HTTP/CSP checks passed using an isolated test port to preserve an unrelated server. Receipts live beside the candidate delivery; historical evidence images bundled by the existing packager remain historical. Native file chooser, physical devices, screen readers and direct-file operation are not claimed verified. This candidate is not published and does not change the existing submission, release or film.
