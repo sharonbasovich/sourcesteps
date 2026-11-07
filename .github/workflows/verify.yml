@@ -14,10 +14,10 @@ jobs:
         with:
           node-version: '22'
       - run: npm test
-      - run: node --test qa/dialog.test.mjs
+      - run: npm run test:dialog
       - run: npm ci --prefix qa --ignore-scripts
-      - run: npx --prefix qa playwright install --with-deps chromium
-      - run: node qa/browser.mjs
+      - run: npx --prefix qa playwright install --with-deps chromium chrome
+      - run: npm run test:browser
       - run: python scripts/release.py
       - uses: actions/upload-artifact@v4
         if: always()

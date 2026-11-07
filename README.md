@@ -68,7 +68,7 @@ A single accidental keystroke previously cleared all review progress. Draft edit
 
 Automated HTTP Chromium now verifies a real downloaded JSON file can restore exact source, positional labels and checked actions after reload, including canceled replacement and same-file retry. Re-export is byte-identical. See VERIFICATION.md for the exact CI run, retained artifact and native-file-chooser limits. No autosave or runtime behavior has been added.
 
-## Private page-exit warning candidate (November 5)
+## Page-exit warning (v0.1.4-rc1)
 
 The browser is asked to warn before reload, navigation or tab closure while an unapplied source draft or unretained review exists. Unchanged synthetic sample and empty workspaces are recreatable and do not warn. A confirmed successful JSON import establishes the latest recoverable review: exact source, piece boundaries, labels and checks. Changing any of these warns again; restoring the exact sample, empty state or latest import clears it. Focus selection and expanded details alone do not warn. Only the most recent import is remembered as a comparison key, in memory for this tab.
 
@@ -76,16 +76,30 @@ Applying source edits, restarting review and discarding a draft do not establish
 
 The warning does not save anything. Browsers control its wording and may require prior interaction; mobile app closures, crashes and process termination may skip it. No autosave, browser storage or network access was added. It does not retain the selected focus, expanded details or pending imports across reload. Successful import is assumed recoverable from the selected local file; the app cannot guarantee that file will remain available.
 
-Run the existing Node and dialog-helper checks, then the dedicated installed-Chrome suite:
+From the source checkout (QA files are not included in the downloadable app archive), run the Node and dialog-helper checks, then both browser suites:
 
 ```powershell
 npm test
-node --test qa/dialog.test.mjs
+npm run test:dialog
 npm ci --prefix qa --ignore-scripts
-node qa/exit-warning.mjs
-$env:SOURCESTEPS_BROWSER='chrome'
-$env:SOURCESTEPS_QA_PORT='14174'
-node qa/browser.mjs
+npx --prefix qa playwright install chromium chrome
+npm run test:browser
+# To run only the dedicated exit-warning suite:
+npm run test:exit
 ```
 
-The dedicated suite uses isolated loopback port 14173. The existing harness defaults to its original port/browser unless these optional QA environment variables are set. All file imports in this verification are synthetic Playwright file-input assignments; native file-picker interaction is intentionally unverified. `qa/exit-warning.mjs` also checks native Chrome beforeunload events with Cancel and Leave, actual downloaded JSON, and 320/390px reduced-motion layouts. This remains a private local candidate; the AccessED entry, existing release and film are unchanged.
+The general browser suite defaults to Playwright's bundled Chromium; the dedicated
+exit-warning suite retains its installed Google Chrome default. CI provisions both.
+Set `$env:SOURCESTEPS_BROWSER='chrome'` to run both suites with an existing Chrome
+installation instead. The dedicated suite uses isolated loopback port 14173;
+`SOURCESTEPS_QA_PORT` optionally overrides the general suite's default port 4173.
+`npm run test:browser` runs both suites and fails if either fails. CI also runs the
+six dialog-helper tests through `npm run test:dialog`; `npm test` remains the
+runtime-only Node suite so it works in the downloadable app archive without QA dependencies.
+
+All file imports in these tests are synthetic Playwright file-input assignments;
+native file-picker interaction is intentionally unverified. The dedicated suite
+checks browser-controlled beforeunload events with Cancel and Leave, downloaded
+JSON, and 320/390px reduced-motion layouts. The published release is v0.1.4-rc1;
+see VERIFICATION.md for dated evidence and limits. This test-wiring maintenance
+does not replace the published release assets, AccessED entry or film.
