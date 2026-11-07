@@ -76,7 +76,7 @@ Applying source edits, restarting review and discarding a draft do not establish
 
 The warning does not save anything. Browsers control its wording and may require prior interaction; mobile app closures, crashes and process termination may skip it. No autosave, browser storage or network access was added. It does not retain the selected focus, expanded details or pending imports across reload. Successful import is assumed recoverable from the selected local file; the app cannot guarantee that file will remain available.
 
-From the source checkout (QA files are not included in the downloadable app archive), run the Node and dialog-helper checks, then both browser suites:
+From the source checkout (QA files are not included in the downloadable app archive), run the Node and dialog-helper checks, then all browser suites:
 
 ```powershell
 npm test
@@ -90,16 +90,28 @@ npm run test:exit
 
 The general browser suite defaults to Playwright's bundled Chromium; the dedicated
 exit-warning suite retains its installed Google Chrome default. CI provisions both.
-Set `$env:SOURCESTEPS_BROWSER='chrome'` to run both suites with an existing Chrome
+Set `$env:SOURCESTEPS_BROWSER='chrome'` to run all suites with an existing Chrome
 installation instead. The dedicated suite uses isolated loopback port 14173;
 `SOURCESTEPS_QA_PORT` optionally overrides the general suite's default port 4173.
-`npm run test:browser` runs both suites and fails if either fails. CI also runs the
+`npm run test:browser` runs the general, exit-warning and review-navigation suites and fails if any fails. CI also runs the
 six dialog-helper tests through `npm run test:dialog`; `npm test` remains the
 runtime-only Node suite so it works in the downloadable app archive without QA dependencies.
 
 All file imports in these tests are synthetic Playwright file-input assignments;
 native file-picker interaction is intentionally unverified. The dedicated suite
 checks browser-controlled beforeunload events with Cancel and Leave, downloaded
-JSON, and 320/390px reduced-motion layouts. The published release is v0.1.4-rc1;
+JSON, and 320/390px reduced-motion layouts. At the November 7 QA-wiring checkpoint, the published release was v0.1.4-rc1;
 see VERIFICATION.md for dated evidence and limits. This test-wiring maintenance
-does not replace the published release assets, AccessED entry or film.
+did not replace the published release assets, AccessED entry or film.
+
+## Find pieces needing review
+
+Above the pieces, use **Find first piece needing review** to enter the unreviewed/unclear review loop, or **Find first unclear piece** to return to uncertainty. Each piece has **Next piece needing review**: it advances in source order and wraps to the first remaining unreviewed or unclear piece. The button stays available after relabeling so a keyboard user can continue without returning to the top. With a single remaining piece it returns to that piece.
+
+Navigation focuses the exact source label without changing the source, labels, action checks or selected action. All pieces remain visible. While a source draft is pending, navigation continues through the applied source, as the existing draft notice explains. No remaining unreviewed/unclear pieces means only that every piece has an Action or Reference label, never that the assignment is complete.
+
+Focused navigation browser checks (no file-picker, import or download steps): `node qa/review-navigation.mjs`, using existing Google Chrome and QA dependencies.
+
+The review-navigation suite defaults to installed Google Chrome, like the exit-warning suite, and respects `SOURCESTEPS_BROWSER`. It uses isolated loopback port 15173 (`SOURCESTEPS_REVIEW_QA_PORT` overrides it). `npm run test:review` runs it independently; `npm run test:browser` and the existing CI job include it automatically.
+
+For a long piece, **Read piece from start** focuses its heading and brings the beginning back into view. Tab returns to that piece's label, without changing review state.

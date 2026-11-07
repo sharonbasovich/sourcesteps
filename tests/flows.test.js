@@ -24,13 +24,15 @@ function harness(){
   click(){this.handlers.click?.();}
   focus(){focused=this.id;}
  }
- for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state','exit-warning']){const x=new Element('div');x.id=id;}
+ for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state','exit-warning','review-next','review-unclear','review-guidance']){const x=new Element('div');x.id=id;}
  const document={getElementById:id=>ids.get(id),createElement:tag=>new Element(tag)};
  vm.runInNewContext(body,{...core,document,window,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob},{filename:'app.js'});
  const get=id=>ids.get(id);
  const visit=(node,predicate)=>node.children.flatMap(x=>[...(predicate(x)?[x]:[]),...visit(x,predicate)]);
  const snapshot=()=>({source:get('context').textContent,labels:visit(get('segments'),x=>x.tagName==='select').map(x=>x.value),checked:visit(get('focus-content'),x=>x.tagName==='input').map(x=>x.checked),summary:get('summary').textContent,status:get('status').textContent});
  return {get,snapshot,
+  readStart(i){visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent==='Read piece from start')[0].handlers.click();},
+  nextReview(i){visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent==='Next piece needing review')[0].handlers.click();},
   warning(){let prevented=false;const event={returnValue:undefined,preventDefault(){prevented=true;}};for(const fn of listeners)fn(event);assert.ok(listeners.size<=1,"At most one exit listener");assert.equal(prevented,!get("exit-warning").hidden);if(prevented)assert.equal(event.returnValue,"");return prevented;},
   importState(incoming,confirmed=true){answer=confirmed;return get("import").onchange({target:{files:[{size:100,text:async()=>core.serialize(incoming)}],value:"synthetic.json"}});},confirmations:()=>confirmations,focused:()=>focused,
   draft(text){get('source').value=text;get('source').handlers.input();},
@@ -310,3 +312,30 @@ test('canceled or invalid Apply protects both draft and existing reviewed work',
  h.invoke('discard-source');assert.equal(h.warning(),false);
  h.draft('Changed');h.invoke('apply-source',true);assert.equal(h.warning(),true);
 });
+
+
+test('review navigation skips labeled pieces, uses positions for duplicates and wraps',()=>{
+ const h=harness();h.edit('Same words\nSame words\nSame words\nConstraint');h.label(0,'reference');h.label(2,'action');h.label(3,'unclear');
+ const before=h.snapshot();h.invoke('review-next');assert.equal(h.focused(),'label-1');h.nextReview(1);assert.equal(h.focused(),'label-3');h.nextReview(3);assert.equal(h.focused(),'label-1');
+ h.invoke('review-unclear');assert.equal(h.focused(),'label-3');assert.equal(h.snapshot().source,before.source);assert.deepEqual(h.snapshot().labels,before.labels);
+});
+test('review navigation guidance never equates labels with assignment completion',()=>{
+ const h=harness();h.edit('Action\nReference');h.label(0,'action');h.label(1,'reference');
+ assert.equal(h.get('review-next').disabled,true);assert.equal(h.get('review-unclear').disabled,true);assert.match(h.get('review-guidance').textContent,/not an assignment-complete/);h.check();assert.equal(h.get('review-next').disabled,true);
+ h.label(1,'unclear');assert.equal(h.get('review-next').disabled,false);assert.equal(h.get('review-unclear').disabled,false);h.invoke('review-next');assert.equal(h.focused(),'label-1');
+});
+test('review navigation follows boundaries, drafts, restart and empty workspace',()=>{
+ const h=harness();h.edit('First line\nSecond line');h.label(0,'reference');h.label(1,'unclear');h.draft('Unapplied replacement');h.invoke('review-next');assert.equal(h.focused(),'label-1');
+ h.invoke('discard-source');h.boundary(0,'Split piece',3);h.invoke('review-next');assert.equal(h.focused(),'label-0');h.nextReview(0);assert.equal(h.focused(),'label-1');
+ h.invoke('restart',true);h.invoke('review-next');assert.equal(h.focused(),'label-0');h.invoke('clear',true);assert.equal(h.get('review-next').disabled,true);assert.match(h.get('review-guidance').textContent,/Add source/);
+});
+
+test('navigation alone leaves recreatable sample clean and existing action focus unchanged',()=>{
+ const h=harness();assert.equal(h.warning(),false);const before=h.snapshot();h.invoke('review-next');h.nextReview(0);assert.equal(h.warning(),false);assert.equal(h.snapshot().source,before.source);assert.deepEqual(h.snapshot().labels,before.labels);
+ h.label(0,'action');h.focusAction(0);const focused=h.focusText();h.invoke('review-next');h.nextReview(1);assert.equal(h.focusText(),focused);
+});
+test('relabelled pieces keep a next-review route and merge removes stale positions',()=>{
+ const h=harness();h.edit('First\nSecond\nThird');h.label(0,'reference');h.nextReview(0);assert.equal(h.focused(),'label-1');h.label(1,'reference');h.nextReview(1);assert.equal(h.focused(),'label-2');h.boundary(0,'Merge with next piece');h.invoke('review-next');assert.equal(h.focused(),'label-0');h.nextReview(0);assert.equal(h.focused(),'label-1');h.nextReview(1);assert.equal(h.focused(),'label-0');
+});
+
+test('read-from-start focuses the exact piece heading without changing review',()=>{const h=harness();h.edit('Repeated\nRepeated');h.label(0,'action');const before=h.snapshot();h.readStart(1);assert.equal(h.focused(),'piece-title-1');assert.deepEqual(h.snapshot(),before);});
