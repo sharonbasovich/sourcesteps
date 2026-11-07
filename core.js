@@ -10,3 +10,12 @@ export function toggle(s,i){if(s.segments[i]?.label!=='action')throw Error('Only
 export function stats(s){return {total:s.source.length,covered:s.segments.reduce((n,x)=>n+(x.label==='unreviewed'?0:x.end-x.start),0),unreviewed:s.segments.filter(x=>x.label==='unreviewed').length,unclear:s.segments.filter(x=>x.label==='unclear').length,actions:s.segments.filter(x=>x.label==='action').length,done:s.segments.filter(x=>x.done).length};}
 export const serialize=s=>JSON.stringify(validate(s),null,2);
 export const parse=text=>validate(JSON.parse(text));
+// Selector positions use the same UTF-16 boundary rule as split; no text is edited.
+export function splitPositions(text){const positions=[];for(let at=1;at<text.length;at++)if(!unsafeBoundary(text,at))positions.push(at);return positions;}
+export function splitPreview(text,at){
+ if(!Number.isInteger(at)||at<=0||at>=text.length)return {error:'Choose a position inside this piece.'};
+ if(unsafeBoundary(text,at))return {error:'Cannot split a Unicode pair or line ending.'};
+ let start=Math.max(0,at-60),end=Math.min(text.length,at+60);
+ if(unsafeBoundary(text,start))start++;if(unsafeBoundary(text,end))end--;
+ return {before:JSON.stringify(text.slice(start,at)),after:JSON.stringify(text.slice(at,end)),leading:start>0,trailing:end<text.length};
+}

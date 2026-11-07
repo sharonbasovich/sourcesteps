@@ -1,4 +1,4 @@
-import {create,sample,split,merge,label,toggle,stats,serialize,parse} from './core.js';
+import {create,sample,split,merge,label,toggle,stats,serialize,parse,splitPositions,splitPreview} from './core.js';
 const $=id=>document.getElementById(id);
 let state=create(sample),active=null,epoch=0,importRequest=0,draftBaseline='';
 // Canonical strings are immutable even though core review operations mutate state.
@@ -57,8 +57,22 @@ function render(){
   controls.append(button('Read piece from start',()=>heading.focus()));
   const nextReview=button('Next piece needing review',()=>nextReviewPiece(i));nextReview.disabled=!(n.unreviewed+n.unclear);controls.append(nextReview);
   row.append(controls);
-  const details=el('details'),summary=el('summary','Adjust piece boundaries');details.append(summary,el('p','Split at a character boundary using a UTF-16 offset (the same units used in the source range). Both resulting pieces become unreviewed. Merging also clears labels and checks.'));
+  const details=el('details'),summary=el('summary','Adjust piece boundaries');details.append(summary,el('p','Choose a split point with the slider and preview, or enter a UTF-16 offset (the same units used in the source range). Both resulting pieces become unreviewed. Merging also clears labels and checks.'));
   const offsetLabel=el('label',`Split offset for piece ${i+1}`),offset=el('input');offset.type='number';offset.min='1';offset.max=String(x.end-x.start-1);offset.value=String(Math.floor((x.end-x.start)/2));offset.id=`offset-${i}`;offsetLabel.htmlFor=offset.id;details.append(offsetLabel,offset);
+  const text=state.source.slice(x.start,x.end),positions=splitPositions(text);
+  const pickerLabel=el('label',`Choose split point for piece ${i+1}`),picker=el('input');picker.type='range';picker.id=`split-point-${i}`;picker.min='0';picker.max=String(Math.max(0,positions.length-1));picker.step='1';picker.disabled=!positions.length;pickerLabel.htmlFor=picker.id;
+  const help=el('p','Move the slider, then use Left/Right for precise boundaries. Preview shows up to 60 UTF-16 units on each side in quoted notation: spaces stay inside quotes; \\r is CR, \\n is LF and \\t is a tab. Preview never edits source.','fine');help.id=`split-help-${i}`;picker.ariaDescribedByElements=[help];
+  const preview=el('div',undefined,'split-preview');preview.id=`split-preview-${i}`;preview.ariaLive='polite';
+  const updatePreview=()=>{
+   const at=Number(offset.value),view=splitPreview(text,at),index=positions.indexOf(at);
+   picker.value=String(index<0?0:index);picker.ariaValueText=index<0?'Numeric offset is invalid; move slider to choose a valid boundary.':`Split after ${at} of ${text.length} UTF-16 units`;
+   preview.replaceChildren();
+   if(view.error){preview.append(el('p',view.error));return;}
+   preview.append(el('strong',`Boundary after ${at} of ${text.length} source units`),el('span','First piece ends with'),el('code',(view.leading?'… ':'')+view.before),el('span','Second piece starts with'),el('code',view.after+(view.trailing?' …':'')));
+  };
+  picker.addEventListener('input',()=>{offset.value=String(positions[Number(picker.value)]);updatePreview();});offset.addEventListener('input',updatePreview);
+  if(positions.length)offset.value=String(positions.reduce((best,at)=>Math.abs(at-Number(offset.value))<Math.abs(best-Number(offset.value))?at:best,positions[0]));
+  details.append(pickerLabel,picker,help,preview);updatePreview();
   const splitButton=button('Split piece',()=>{act(()=>{const next=split(state,i,Number(offset.value));active=null;return next;},'Piece split. Review both new pieces.',`label-${i}`);});splitButton.disabled=x.end-x.start<2;details.append(splitButton);
   const mergeButton=button('Merge with next piece',()=>{act(()=>{const next=merge(state,i);active=null;return next;},'Adjacent pieces merged and set to unreviewed.',`label-${i}`);});mergeButton.disabled=i===state.segments.length-1;details.append(mergeButton);row.append(details);$('segments').append(row);
  });renderReviewNavigation();renderFocus();syncDraft();
