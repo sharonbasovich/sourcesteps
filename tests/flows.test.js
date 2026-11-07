@@ -340,3 +340,21 @@ test('relabelled pieces keep a next-review route and merge removes stale positio
 
 test('read-from-start focuses the exact piece heading without changing review',()=>{const h=harness();h.edit('Repeated\nRepeated');h.label(0,'action');const before=h.snapshot();h.readStart(1);assert.equal(h.focused(),'piece-title-1');assert.deepEqual(h.snapshot(),before);});
 test('split selector changes preview without changing draft review or focus',()=>{const h=harness();h.edit('First task then second.\nOther task');h.label(1,'action');h.check();h.draft('Pending source');const before=h.snapshot();const picker=h.get('split-point-0');picker.value='4';picker.handlers.input();assert.equal(h.get('offset-0').value,'5');assert.match(h.get('split-preview-0').textContent,/First/);assert.deepEqual(h.snapshot(),before);assert.equal(h.get('source').value,'Pending source');h.boundary(0,'Split piece');assert.equal(h.get('context').textContent,'First task then second.\nOther task');assert.equal(h.get('source').value,'Pending source');});
+
+test('repeated boundary changes while drafting preserve checked duplicate range and return mapping',()=>{
+ const h=harness();h.edit('Repeat\nRepeat\nTail');h.label(1,'action');h.check();h.draft('Unapplied reordered Tail\nRepeat\nRepeat');
+ const assertPieces=(ranges,texts,labels)=>{
+  const rows=h.get('segments').children;
+  assert.equal(rows.length,ranges.length);
+  rows.forEach((row,i)=>{assert.equal(row.children[0].textContent.match(/source units (\d+)\u2013(\d+)/)?.slice(1).join('-'),ranges[i]);assert.equal(row.children[1].textContent,texts[i]);});
+  assert.deepEqual(h.snapshot().labels,labels);assert.deepEqual(h.snapshot().checked,[true]);assert.equal(h.snapshot().source,'Repeat\nRepeat\nTail');assert.equal(h.get('source').value,'Unapplied reordered Tail\nRepeat\nRepeat');
+ };
+ for(let n=0;n<20;n++){
+  h.boundary(0,'Split piece',3);
+  assertPieces(['0-3','3-7','7-14','14-18'],['Rep','eat\n','Repeat\n','Tail'],['unreviewed','unreviewed','action','unreviewed']);h.back();assert.equal(h.focused(),'label-2');
+  h.boundary(0,'Merge with next piece');
+  assertPieces(['0-7','7-14','14-18'],['Repeat\n','Repeat\n','Tail'],['unreviewed','action','unreviewed']);h.back();assert.equal(h.focused(),'label-1');
+  h.invoke('apply-source',false);assertPieces(['0-7','7-14','14-18'],['Repeat\n','Repeat\n','Tail'],['unreviewed','action','unreviewed']);
+ }
+ h.invoke('discard-source');assert.equal(h.get('source').value,'Repeat\nRepeat\nTail');assert.deepEqual(h.snapshot().checked,[true]);h.back();assert.equal(h.focused(),'label-1');
+});
