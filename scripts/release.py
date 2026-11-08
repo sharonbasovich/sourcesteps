@@ -16,6 +16,7 @@ FILES = [
     'README.md', 'LICENSE', 'ATTRIBUTION.md', 'DEMO.md', 'RELEASE-NOTES.md',
     'scripts/release.py', 'tests/core.test.js', 'tests/flows.test.js',
     'tests/limits.test.js', 'tests/import-boundaries.test.js', 'tests/split-selector.test.js',
+    'tests/document-integrity.test.js',
     'tests/make-fixtures.js', 'tests/BROWSER-CHECKLIST.md',
     'tests/fixtures/valid.json', 'tests/fixtures/invalid.json',
     'evidence/desktop.jpg', 'evidence/mobile-390.jpg',
