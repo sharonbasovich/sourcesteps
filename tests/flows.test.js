@@ -26,7 +26,14 @@ function harness(){
  }
  for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state','exit-warning','review-next','review-unclear','review-guidance']){const x=new Element('div');x.id=id;}
  const document={getElementById:id=>ids.get(id),createElement:tag=>new Element(tag)};
- vm.runInNewContext(body,{...core,document,window,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob},{filename:'app.js'});
+ vm.runInNewContext(body,{...core,document,window,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob,TextDecoder},{filename:'app.js'});
+ // Legacy string fixtures model successful byte reads; real Files bypass this adapter.
+ const nativeImport=ids.get('import').onchange;
+ ids.get('import').onchange=e=>{
+  const file=e.target.files[0];
+  if(file && !file.arrayBuffer && file.text)file.arrayBuffer=async()=>new TextEncoder().encode(await file.text()).buffer;
+  return nativeImport(e);
+ };
  const get=id=>ids.get(id);
  const visit=(node,predicate)=>node.children.flatMap(x=>[...(predicate(x)?[x]:[]),...visit(x,predicate)]);
  const snapshot=()=>({source:get('context').textContent,labels:visit(get('segments'),x=>x.tagName==='select').map(x=>x.value),checked:visit(get('focus-content'),x=>x.tagName==='input').map(x=>x.checked),summary:get('summary').textContent,status:get('status').textContent});
@@ -357,4 +364,45 @@ test('repeated boundary changes while drafting preserve checked duplicate range 
   h.invoke('apply-source',false);assertPieces(['0-7','7-14','14-18'],['Repeat\n','Repeat\n','Tail'],['unreviewed','action','unreviewed']);
  }
  h.invoke('discard-source');assert.equal(h.get('source').value,'Repeat\nRepeat\nTail');assert.deepEqual(h.snapshot().checked,[true]);h.back();assert.equal(h.focused(),'label-1');
+});
+
+
+test('malformed UTF-8 is rejected before confirmation without replacing reviewed work',async()=>{
+ for(const bad of [[255],[192,175],[237,160,128],[226,130]]){
+  const h=harness();h.edit('Keep');h.label(0,'action');h.check();h.draft('Unapplied');const before=h.snapshot();
+  const json=Buffer.from(core.serialize(core.create('X'))),i=json.indexOf(Buffer.from('"X"'))+1;
+  const raw=Buffer.concat([json.subarray(0,i),Buffer.from(bad),json.subarray(i+1)]);
+  await h.get('import').onchange({target:{files:[new File([raw],'bad.json')],value:'bad'}});
+  assert.deepEqual({...h.snapshot(),status:before.status},before);assert.equal(h.get('source').value,'Unapplied');assert.equal(h.confirmations(),0);assert.equal(h.warning(),true);assert.match(h.snapshot().status,/valid UTF-8/);
+ }
+});
+test('real UTF-8 File retains Unicode CRLF and literal replacement character',async()=>{
+ const h=harness();h.invoke('restart',true);const incoming=core.create('café 🧠\r\n�');
+ await h.get('import').onchange({target:{files:[new File([core.serialize(incoming)],'valid.json')],value:'valid'}});
+ assert.equal(h.snapshot().source,incoming.source);assert.equal(h.warning(),false);assert.match(h.snapshot().status,/Exact source/);
+});
+
+test('independent: optional UTF8 BOM stripped, embedded FEFF and literal FFFD retained',async()=>{
+ const h=harness();h.invoke('restart',true);const source='\uFEFFinside\r\n\uFFFD𝄞';
+ const bytes=Buffer.concat([Buffer.from([239,187,191]),Buffer.from(core.serialize(core.create(source)))]);
+ await h.get('import').onchange({target:{files:[new File([bytes],'bom.json')],value:'x'}});
+ assert.equal(h.snapshot().source,source);assert.equal(h.warning(),false);
+});
+test('independent: UTF16 and UTF8 invalid continuation never prompt or clean',async()=>{
+ for(const bytes of [Buffer.from([255,254,123,0,125,0]),Buffer.from([239,187,191,255]),Buffer.from([128])]){
+ const h=harness();h.edit('retain');h.label(0,'unclear');const before=h.snapshot();
+ await h.get('import').onchange({target:{files:[new File([bytes],'bad')],value:'x'}});
+ assert.equal(h.snapshot().source,before.source);assert.deepEqual(h.snapshot().labels,before.labels);assert.equal(h.confirmations(),0);assert.equal(h.warning(),true);assert.match(h.snapshot().status,/valid UTF-8/);
+ }
+});
+test('independent: newer valid bytes supersede malformed pending bytes without stale status',async()=>{
+ const h=harness();let done;
+ const p=h.get('import').onchange({target:{files:[{size:1,arrayBuffer:()=>new Promise(r=>done=r)}],value:'old'}});
+ await h.importState(core.create('New'));const after=h.snapshot();done(new Uint8Array([255]).buffer);await p;
+ assert.deepEqual(h.snapshot(),after);assert.equal(h.warning(),false);
+});
+test('independent: rejected byte read preserves current and previous recovery identity',async()=>{
+ const h=harness();await h.importState(core.create('Saved'));h.edit('Unsaved');h.draft('Draft');const before=h.snapshot();
+ await h.get('import').onchange({target:{files:[{size:1,arrayBuffer:async()=>{throw Error('read failed')}}],value:'x'}});
+ assert.equal(h.snapshot().source,before.source);assert.equal(h.get('source').value,'Draft');assert.equal(h.warning(),true);assert.match(h.snapshot().status,/read failed/);h.invoke('discard-source');h.edit('Saved');assert.equal(h.warning(),false);
 });
