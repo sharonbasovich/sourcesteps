@@ -6,7 +6,7 @@ SourceSteps is a local-only AccessED prototype, created October 20, 2026, distri
 
 For the packaged reviewer route, open the [v0.1.6-rc1 release](https://github.com/sharonbasovich/sourcesteps/releases/tag/v0.1.6-rc1) and download `SourceSteps-0.1.6-rc1.zip`. Extract it, open a terminal in the extracted folder containing `package.json`, and follow **Run and test** below. Node.js 22 must already be available; the app needs no installation or build step. The synthetic example loads at startup; **Demo** below gives a short review route.
 
-This is a local-server prototype, not a hosted app. The release page includes the archive checksum, verification scope and remaining limitations. The frozen release targets `988cd098`; newer main includes regression tooling and strict UTF-8 import validation, not a replacement archive or additional packaged browser acceptance. Historical checks below remain specific to their stated versions.
+This is a local-server prototype, not a hosted app. The release page includes the archive checksum, verification scope and remaining limitations. The frozen release targets `988cd098`; newer main includes regression tooling, strict UTF-8 import validation, and clearer Restart confirmation wording that discloses removal of manual splits and merges, labels, and checks, not a replacement archive or additional packaged browser acceptance. Historical checks below remain specific to their stated versions.
 
 ## Run and test
 
