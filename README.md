@@ -2,6 +2,12 @@
 
 SourceSteps is a local-only AccessED prototype, created October 20, 2026, distributed as source and a downloadable release candidate. It helps a learner keep dense assignment instructions in view using an exact-source, manually labeled checklist and one-action focus view. It does not rewrite teacher requirements or generate answers. No hosted demo is deployed.
 
+## Download the reviewed prototype
+
+For the packaged reviewer route, open the [v0.1.6-rc1 release](https://github.com/sharonbasovich/sourcesteps/releases/tag/v0.1.6-rc1) and download `SourceSteps-0.1.6-rc1.zip`. Extract it, open a terminal in the extracted folder containing `package.json`, and follow **Run and test** below. Node.js 22 must already be available; the app needs no installation or build step. The synthetic example loads at startup; **Demo** below gives a short review route.
+
+This is a local-server prototype, not a hosted app. The release page includes the archive checksum, verification scope and remaining limitations. The frozen release targets `988cd098`; newer main includes source-only regression-tooling changes, not a replacement archive or additional packaged browser acceptance. Historical checks below remain specific to their stated versions.
+
 ## Run and test
 
 Requires existing Node.js 22. No installation or build step is needed.
