@@ -93,9 +93,10 @@ $('source').addEventListener('input',()=>{epoch++;syncDraft();announce(hasDraft(
 $('apply-source').onclick=()=>{
  if(!hasDraft())return;
  let next;try{next=create($('source').value);}catch(error){announce(error.message+' Draft retained; applied source and review are unchanged.');$('source').focus();return;}
- const reviewed=state.segments.filter(x=>x.label!=='unreviewed').length,n=stats(state);
- if((reviewed||n.done)&&!confirm(`Apply the changed source? This resets ${reviewed} labeled pieces and ${n.done} checked actions. Cancel keeps your draft and existing review.`)){announce('Apply canceled. Draft and existing review kept.');$('apply-source').focus();return;}
- state=next;active=null;epoch++;resetDraft();render();announce('Source applied. Review the new pieces; previous labels, checks and focus links were reset.');$('source').focus();
+ const reviewed=state.segments.filter(x=>x.label!=='unreviewed').length,n=stats(state),initial=create(state.source).segments;
+ const customBoundaries=state.segments.length!==initial.length||state.segments.some((x,i)=>x.start!==initial[i].start||x.end!==initial[i].end);
+ if((reviewed||n.done||customBoundaries)&&!confirm(`Apply the changed source? This removes all manual splits and merges and resets ${reviewed} labeled pieces and ${n.done} checked actions. Cancel keeps your draft and existing review.`)){announce('Apply canceled. Draft and existing review kept.');$('apply-source').focus();return;}
+ state=next;active=null;epoch++;resetDraft();render();announce('Source applied. Review the new pieces; previous piece boundaries, labels, checks and focus links were reset.');$('source').focus();
 };
 $('discard-source').onclick=()=>{if(!hasDraft())return;epoch++;resetDraft();announce('Source draft discarded. Applied source, labels, checks and focus are unchanged.');$('source').focus();};
 function confirmReplace(message,fn){if(confirm((hasDraft()?'Discard the unapplied source draft? ':'')+message))fn();}

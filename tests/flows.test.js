@@ -12,7 +12,7 @@ assert.notEqual(body,source,'App import must be replaced only for this harness')
 function harness(){
  const listeners=new Set();
  const window={addEventListener:(name,fn)=>{assert.equal(name,"beforeunload");listeners.add(fn);},removeEventListener:(name,fn)=>{assert.equal(name,"beforeunload");listeners.delete(fn);}};
- const ids=new Map();let answer=false,confirmations=0,focused=null;
+ const ids=new Map();let answer=false,confirmations=0,focused=null,prompt=null;
  class Element {
   constructor(tag){this.tagName=tag;this.children=[];this.handlers={};this._text='';this.value='';this.checked=false;}
   set id(value){this._id=value;ids.set(value,this);}get id(){return this._id;}
@@ -26,7 +26,8 @@ function harness(){
  }
  for(const id of ['source','summary','context','segments','focus-title','focus-content','export','status','sample','clear','restart','import','source-draft','apply-source','discard-source','review-state','exit-warning','review-next','review-unclear','review-guidance']){const x=new Element('div');x.id=id;}
  const document={getElementById:id=>ids.get(id),createElement:tag=>new Element(tag)};
- vm.runInNewContext(body,{...core,document,window,confirm:()=>{confirmations++;return answer;},setTimeout,URL,Blob,TextDecoder},{filename:'app.js'});
+ const context=vm.createContext({...core,document,window,confirm:message=>{prompt=message;confirmations++;return answer;},setTimeout,URL,Blob,TextDecoder});
+ vm.runInContext(body,context,{filename:'app.js'});
  // Legacy string fixtures model successful byte reads; real Files bypass this adapter.
  const nativeImport=ids.get('import').onchange;
  ids.get('import').onchange=e=>{
@@ -37,7 +38,7 @@ function harness(){
  const get=id=>ids.get(id);
  const visit=(node,predicate)=>node.children.flatMap(x=>[...(predicate(x)?[x]:[]),...visit(x,predicate)]);
  const snapshot=()=>({source:get('context').textContent,labels:visit(get('segments'),x=>x.tagName==='select').map(x=>x.value),checked:visit(get('focus-content'),x=>x.tagName==='input').map(x=>x.checked),summary:get('summary').textContent,status:get('status').textContent});
- return {get,snapshot,
+ return {get,snapshot,review:()=>JSON.parse(vm.runInContext('serialize(state)',context)),prompt:()=>prompt,
   readStart(i){visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent==='Read piece from start')[0].handlers.click();},
   nextReview(i){visit(get('segments').children[i],x=>x.tagName==='button'&&x.textContent==='Next piece needing review')[0].handlers.click();},
   warning(){let prevented=false;const event={returnValue:undefined,preventDefault(){prevented=true;}};for(const fn of listeners)fn(event);assert.ok(listeners.size<=1,"At most one exit listener");assert.equal(prevented,!get("exit-warning").hidden);if(prevented)assert.equal(event.returnValue,"");return prevented;},
@@ -405,4 +406,55 @@ test('independent: rejected byte read preserves current and previous recovery id
  const h=harness();await h.importState(core.create('Saved'));h.edit('Unsaved');h.draft('Draft');const before=h.snapshot();
  await h.get('import').onchange({target:{files:[{size:1,arrayBuffer:async()=>{throw Error('read failed')}}],value:'x'}});
  assert.equal(h.snapshot().source,before.source);assert.equal(h.get('source').value,'Draft');assert.equal(h.warning(),true);assert.match(h.snapshot().status,/read failed/);h.invoke('discard-source');h.edit('Saved');assert.equal(h.warning(),false);
+});
+
+
+function unreviewedCustomBoundaries(){
+ const h=harness();h.edit('First 🧠 line\r\nSecond line\nThird line');
+ h.boundary(0,'Split piece',5);h.boundary(2,'Merge with next piece');
+ const state=h.review(),initial=core.create(state.source);
+ assert.equal(state.segments.length,initial.segments.length,'Equal counts must not hide changed boundaries');
+ assert.notDeepEqual(state.segments.map(x=>[x.start,x.end]),initial.segments.map(x=>[x.start,x.end]));
+ assert.ok(state.segments.every(x=>x.label==='unreviewed'&&!x.done));return h;
+}
+
+test('Apply asks before losing unreviewed manual boundaries; repeated cancellation preserves complete review and draft',()=>{
+ const h=unreviewedCustomBoundaries(),before=h.review(),draft=before.source+'\nNew instruction';
+ h.draft(draft);
+ for(let attempt=0;attempt<2;attempt++){
+  const count=h.confirmations();h.invoke('apply-source',false);
+  assert.equal(h.confirmations(),count+1,'Custom boundaries need confirmation even with no labels');
+  assert.match(h.prompt(),/manual splits and merges/);
+  assert.match(h.prompt(),/0 labeled pieces and 0 checked actions/);
+  assert.deepEqual(h.review(),before);assert.equal(h.get('source').value,draft);
+  assert.equal(h.get('source-draft').hidden,false);assert.equal(h.get('export').disabled,true);
+  assert.equal(h.focused(),'apply-source');assert.ok(h.warning());
+ }
+});
+
+test('confirmed Apply resets unreviewed custom boundaries to the new exact-source partition once',()=>{
+ const h=unreviewedCustomBoundaries(),draft=h.review().source+'\nNew instruction';h.draft(draft);
+ const count=h.confirmations();h.invoke('apply-source',true);
+ assert.equal(h.confirmations(),count+1);assert.deepEqual(h.review(),core.create(draft));
+ assert.equal(h.get('source').value,draft);assert.equal(h.get('source-draft').hidden,true);
+ assert.equal(h.get('export').disabled,false);assert.equal(h.focused(),'source');
+ h.invoke('apply-source',true);assert.equal(h.confirmations(),count+1,'No pending draft means no repeat apply');
+});
+
+test('Apply disclosure includes boundary loss with labeled and checked progress; cancellation preserves focus mapping',()=>{
+ const h=unreviewedCustomBoundaries();h.label(1,'action');h.check();h.focusAction(1);
+ const before=h.review();h.draft(before.source+' updated');h.invoke('apply-source',false);
+ assert.match(h.prompt(),/manual splits and merges/);assert.match(h.prompt(),/1 labeled pieces and 1 checked actions/);
+ assert.deepEqual(h.review(),before);h.back();assert.equal(h.focused(),'label-1');
+ h.invoke('apply-source',true);assert.deepEqual(h.review(),core.create(before.source+' updated'));
+});
+
+test('default or exactly restored unreviewed boundaries retain the no-confirmation Apply path',()=>{
+ for(const restore of [false,true]){
+  const h=harness();h.edit('Alpha\nBeta');
+  if(restore){h.boundary(0,'Split piece',2);h.boundary(0,'Merge with next piece');}
+  const before=h.review();assert.deepEqual(before,core.create(before.source));
+  const count=h.confirmations();h.draft('Changed\nSource');h.invoke('apply-source',false);
+  assert.equal(h.confirmations(),count);assert.deepEqual(h.review(),core.create('Changed\nSource'));
+ }
 });

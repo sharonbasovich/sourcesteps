@@ -6,7 +6,7 @@ SourceSteps is a local-only AccessED prototype, created October 20, 2026, distri
 
 For the packaged reviewer route, open the [v0.1.6-rc1 release](https://github.com/sharonbasovich/sourcesteps/releases/tag/v0.1.6-rc1) and download `SourceSteps-0.1.6-rc1.zip`. Extract it, open a terminal in the extracted folder containing `package.json`, and follow **Run and test** below. Node.js 22 must already be available; the app needs no installation or build step. The synthetic example loads at startup; **Demo** below gives a short review route.
 
-This is a local-server prototype, not a hosted app. The release page includes the archive checksum, verification scope and remaining limitations. The frozen release targets `988cd098`; newer main includes regression tooling, strict UTF-8 import validation, and clearer Restart confirmation wording that discloses removal of manual splits and merges, labels, and checks, not a replacement archive or additional packaged browser acceptance. Historical checks below remain specific to their stated versions.
+This is a local-server prototype, not a hosted app. The release page includes the archive checksum, verification scope and remaining limitations. The frozen release targets `988cd098`; newer main includes regression tooling, strict UTF-8 import validation, clearer Restart confirmation wording, and an Apply confirmation for manually adjusted piece boundaries even when they are still unreviewed, not a replacement archive or additional packaged browser acceptance. Historical checks below remain specific to their stated versions.
 
 ## Run and test
 
@@ -133,3 +133,9 @@ Release verification: 71 Node application/model tests, six dialog-helper tests, 
 ## Strict UTF-8 import validation (source-only maintenance)
 
 Malformed UTF-8 files are rejected before JSON validation or replacement confirmation rather than silently replacing invalid bytes with U+FFFD. Valid Unicode, literal U+FFFD, CRLF source and a leading UTF-8 BOM retain prior behavior. Rejected imports preserve applied review and unapplied drafts. Existing selection-race and size guards remain. Linux Node 24 actual-handler and model tests are source-level evidence, not native file-picker, browser-download, screen-reader or packaged-release acceptance. The frozen v0.1.6-rc1 archive is unchanged and does not include this fix.
+
+## Confirm source changes before losing manual boundaries
+
+Applying a source draft now also asks before replacing manual splits or merges when every piece remains unreviewed. The check compares exact ranges against the original line-based partition, including changes that leave the piece count unchanged. Cancel keeps the draft and complete applied review; accepting rebuilds the pieces from the new source. Restoring the original boundaries with no labels or checks retains the existing no-confirmation path. The source help and confirmation disclose boundary loss alongside labels and checks.
+
+This source-only correction has actual-handler Node regressions. It does not replace the frozen v0.1.6-rc1 archive or establish new native-dialog, file-picker, download, physical-touch or screen-reader acceptance.
